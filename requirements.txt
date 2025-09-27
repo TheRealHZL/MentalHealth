@@ -1,0 +1,77 @@
+# MindBridge API - Custom AI Dependencies
+# Nur die essentiellen Packages ohne HuggingFace
+
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+alembic==1.13.1
+psycopg2-binary==2.9.9
+
+# Redis & Caching
+redis==5.0.1
+aioredis==2.0.1
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# Machine Learning (PyTorch Ecosystem)
+torch==2.1.0
+torchvision==0.16.0
+torchaudio==0.16.0
+numpy==1.25.2
+scipy==1.11.4
+
+# Data Processing
+pandas==2.1.3
+scikit-learn==1.3.2
+
+# Text Processing (Minimal)
+nltk==3.8.1
+spacy==3.7.2
+regex==2023.10.3
+unidecode==1.3.7
+
+# Async & HTTP
+httpx==0.25.2
+aiofiles==23.2.1
+aiohttp==3.9.1
+
+# Monitoring & Logging
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Development & Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Environment & Config
+python-dotenv==1.0.0
+click==8.1.7
+
+# Performance
+orjson==3.9.10
+
+# Optional: GPU Support (uncomment if using CUDA)
+# torch==2.1.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+# torchvision==0.16.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+# torchaudio==0.16.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+
+# Production WSGI Server
+gunicorn==21.2.0
+
+# Memory profiling (development)
+memory-profiler==0.61.0
+psutil==5.9.6

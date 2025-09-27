@@ -1,0 +1,169 @@
+# Docker Compose for MindBridge AI Platform Development
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mindbridge_postgres
+    environment:
+      POSTGRES_DB: mindbridge_dev
+      POSTGRES_USER: mindbridge_user
+      POSTGRES_PASSWORD: mindbridge_dev_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init:/docker-entrypoint-initdb.d
+    networks:
+      - mindbridge_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mindbridge_user -d mindbridge_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: mindbridge_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - mindbridge_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  # pgAdmin for Database Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mindbridge_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mindbridge.app
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - mindbridge_network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Redis Commander for Redis Management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: mindbridge_redis_commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin123
+    ports:
+      - "8081:8081"
+    networks:
+      - mindbridge_network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # MindBridge API (Development)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: mindbridge_api
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://mindbridge_user:mindbridge_dev_password@postgres:5432/mindbridge_dev
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      
+      # Security
+      SECRET_KEY: dev-secret-key-change-in-production-this-is-not-secure
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_HOURS: 24
+      
+      # Environment
+      ENVIRONMENT: development
+      DEBUG: "true"
+      
+      # CORS
+      ALLOWED_HOSTS: '["*"]'
+      CORS_ORIGINS: '["*"]'
+      
+      # Features
+      AI_ENGINE_ENABLED: "true"
+      RATE_LIMIT_ENABLED: "true"
+      SHARING_ENABLED: "true"
+      ANALYTICS_ENABLED: "true"
+      
+      # Logging
+      LOG_LEVEL: INFO
+      
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - mindbridge_uploads:/app/data/uploads
+      - mindbridge_licenses:/app/data/licenses
+    networks:
+      - mindbridge_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Nginx Reverse Proxy (Optional for development)
+  nginx:
+    image: nginx:alpine
+    container_name: mindbridge_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    networks:
+      - mindbridge_network
+    depends_on:
+      - api
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  mindbridge_uploads:
+    driver: local
+  mindbridge_licenses:
+    driver: local
+
+networks:
+  mindbridge_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
