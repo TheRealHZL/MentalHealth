@@ -6,9 +6,13 @@ Alle AI-bezogenen API-Endpunkte für unsere eigene KI-Implementation.
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import Dict, Any, Optional, List
+from pydantic import BaseModel, Field
+from datetime import datetime
 import logging
+import base64
+import uuid
 
-from src.core.security import get_current_user_id_optional, create_rate_limit_dependency
+from src.core.security import get_current_user_id_optional, get_current_user_id, create_rate_limit_dependency
 from src.schemas.ai import (
     EmotionPredictionRequest, EmotionPredictionResponse,
     MoodPredictionRequest, MoodPredictionResponse,
@@ -16,6 +20,11 @@ from src.schemas.ai import (
     SentimentAnalysisRequest, SentimentAnalysisResponse,
     AIStatusResponse
 )
+from src.services.encryption_service import EncryptionService
+from src.models.encrypted_models import EncryptedChatMessage
+from src.core.database import get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +32,40 @@ router = APIRouter()
 
 # Rate limiting for AI endpoints
 ai_rate_limit = create_rate_limit_dependency(limit=100, window_minutes=60)
+
+
+# ========================================
+# Encrypted Chat Message Models
+# ========================================
+
+class EncryptedChatPayload(BaseModel):
+    """Encrypted chat message payload from client"""
+    ciphertext: str = Field(description="Base64-encoded encrypted data")
+    nonce: str = Field(description="Base64-encoded nonce (12 bytes)")
+    version: int = Field(default=1, description="Encryption version")
+
+
+class EncryptedChatMessageCreate(BaseModel):
+    """Create encrypted chat message"""
+    encrypted_data: EncryptedChatPayload = Field(description="Encrypted chat data")
+    session_id: Optional[str] = Field(None, description="Optional session ID for grouping")
+    message_type: str = Field(default="chat", description="Message type")
+
+
+class EncryptedChatMessageResponse(BaseModel):
+    """Encrypted chat message response"""
+    id: str = Field(description="Message ID")
+    user_id: str = Field(description="User ID")
+    session_id: Optional[str] = Field(None, description="Session ID")
+    encrypted_data: EncryptedChatPayload = Field(description="Encrypted data")
+    message_type: str = Field(description="Message type")
+    created_at: datetime = Field(description="Creation timestamp")
+    encryption_version: int = Field(description="Encryption version")
+
+
+# ========================================
+# Original AI Endpoints (Unencrypted)
+# ========================================
 
 @router.get("/status", response_model=AIStatusResponse)
 async def get_ai_status(request: Request) -> Dict[str, Any]:
@@ -430,4 +473,312 @@ async def submit_model_feedback(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to submit feedback"
+        )
+
+
+# ========================================
+# Encrypted Chat Message Endpoints (Zero-Knowledge)
+# ========================================
+
+@router.post("/chat/encrypted", response_model=EncryptedChatMessageResponse)
+async def create_encrypted_chat_message(
+    chat_data: EncryptedChatMessageCreate,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session),
+    _rate_limit = Depends(ai_rate_limit)
+) -> Dict[str, Any]:
+    """
+    Store Encrypted Chat Message (Zero-Knowledge)
+
+    Stores client-side encrypted AI chat messages. The server CANNOT read the conversation!
+
+    **Zero-Knowledge:**
+    - User messages encrypted in the browser
+    - AI responses encrypted in the browser
+    - Server stores encrypted blobs
+    - Server NEVER sees conversation content
+    - Perfect for sensitive therapeutic conversations
+    """
+    try:
+        # Validate encrypted payload structure
+        payload_dict = {
+            "ciphertext": chat_data.encrypted_data.ciphertext,
+            "nonce": chat_data.encrypted_data.nonce,
+            "version": chat_data.encrypted_data.version
+        }
+
+        is_valid, error_msg = EncryptionService.validate_encrypted_payload(payload_dict)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid encrypted payload: {error_msg}"
+            )
+
+        # Decode base64 to binary for storage
+        ciphertext_bytes = base64.b64decode(chat_data.encrypted_data.ciphertext)
+        nonce_bytes = base64.b64decode(chat_data.encrypted_data.nonce)
+
+        # Combine ciphertext + nonce for storage
+        encrypted_data = ciphertext_bytes + nonce_bytes
+
+        # Validate size
+        is_size_valid, size_error = EncryptionService.validate_encrypted_data_size(encrypted_data)
+        if not is_size_valid:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=size_error
+            )
+
+        # Parse session_id if provided
+        session_uuid = None
+        if chat_data.session_id:
+            try:
+                session_uuid = uuid.UUID(chat_data.session_id)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid session_id format"
+                )
+
+        # Create encrypted chat message
+        message = EncryptedChatMessage(
+            id=uuid.uuid4(),
+            user_id=uuid.UUID(user_id),
+            session_id=session_uuid,
+            encrypted_data=encrypted_data,
+            message_type=chat_data.message_type,
+            encryption_version=chat_data.encrypted_data.version,
+            is_deleted=False
+        )
+
+        db.add(message)
+        await db.commit()
+        await db.refresh(message)
+
+        logger.info(f"Encrypted chat message created for user {user_id}")
+
+        # Extract nonce for response (last 12 bytes)
+        stored_ciphertext = message.encrypted_data[:-12]
+        stored_nonce = message.encrypted_data[-12:]
+
+        return {
+            "id": str(message.id),
+            "user_id": str(message.user_id),
+            "session_id": str(message.session_id) if message.session_id else None,
+            "encrypted_data": {
+                "ciphertext": base64.b64encode(stored_ciphertext).decode('utf-8'),
+                "nonce": base64.b64encode(stored_nonce).decode('utf-8'),
+                "version": message.encryption_version
+            },
+            "message_type": message.message_type,
+            "created_at": message.created_at,
+            "encryption_version": message.encryption_version
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create encrypted chat message: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verschlüsselte Chat-Nachricht konnte nicht erstellt werden"
+        )
+
+
+@router.get("/chat/encrypted", response_model=List[EncryptedChatMessageResponse])
+async def get_encrypted_chat_messages(
+    session_id: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session)
+) -> List[Dict[str, Any]]:
+    """
+    Get Encrypted Chat Messages (Zero-Knowledge)
+
+    Returns encrypted chat messages. Client must decrypt them.
+    Optionally filter by session_id.
+    """
+    try:
+        # Build query
+        query = select(EncryptedChatMessage).where(
+            and_(
+                EncryptedChatMessage.user_id == uuid.UUID(user_id),
+                EncryptedChatMessage.is_deleted == False
+            )
+        )
+
+        # Filter by session if provided
+        if session_id:
+            try:
+                session_uuid = uuid.UUID(session_id)
+                query = query.where(EncryptedChatMessage.session_id == session_uuid)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid session_id format"
+                )
+
+        # Execute query
+        result = await db.execute(
+            query
+            .order_by(EncryptedChatMessage.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        messages = result.scalars().all()
+
+        # Format response
+        response = []
+        for message in messages:
+            # Extract nonce (last 12 bytes)
+            stored_ciphertext = message.encrypted_data[:-12]
+            stored_nonce = message.encrypted_data[-12:]
+
+            response.append({
+                "id": str(message.id),
+                "user_id": str(message.user_id),
+                "session_id": str(message.session_id) if message.session_id else None,
+                "encrypted_data": {
+                    "ciphertext": base64.b64encode(stored_ciphertext).decode('utf-8'),
+                    "nonce": base64.b64encode(stored_nonce).decode('utf-8'),
+                    "version": message.encryption_version
+                },
+                "message_type": message.message_type,
+                "created_at": message.created_at,
+                "encryption_version": message.encryption_version
+            })
+
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get encrypted chat messages: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verschlüsselte Chat-Nachrichten konnten nicht geladen werden"
+        )
+
+
+@router.delete("/chat/encrypted/{message_id}")
+async def delete_encrypted_chat_message(
+    message_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session)
+) -> Dict[str, Any]:
+    """
+    Delete Encrypted Chat Message (Soft Delete)
+
+    Marks message as deleted (GDPR compliance).
+    """
+    try:
+        result = await db.execute(
+            select(EncryptedChatMessage)
+            .where(
+                and_(
+                    EncryptedChatMessage.id == uuid.UUID(message_id),
+                    EncryptedChatMessage.user_id == uuid.UUID(user_id),
+                    EncryptedChatMessage.is_deleted == False
+                )
+            )
+        )
+
+        message = result.scalar_one_or_none()
+
+        if not message:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Verschlüsselte Chat-Nachricht nicht gefunden"
+            )
+
+        # Soft delete
+        message.is_deleted = True
+        message.deleted_at = datetime.utcnow()
+
+        await db.commit()
+
+        logger.info(f"Encrypted chat message soft-deleted: {message_id}")
+
+        return {
+            "success": True,
+            "message": "Verschlüsselte Chat-Nachricht erfolgreich gelöscht"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete encrypted chat message: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verschlüsselte Chat-Nachricht konnte nicht gelöscht werden"
+        )
+
+
+@router.delete("/chat/encrypted/session/{session_id}")
+async def delete_encrypted_session(
+    session_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session)
+) -> Dict[str, Any]:
+    """
+    Delete All Messages in Encrypted Session (Soft Delete)
+
+    Deletes all messages in a specific session (GDPR compliance).
+    """
+    try:
+        # Parse session_id
+        try:
+            session_uuid = uuid.UUID(session_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid session_id format"
+            )
+
+        # Get all messages in session
+        result = await db.execute(
+            select(EncryptedChatMessage)
+            .where(
+                and_(
+                    EncryptedChatMessage.session_id == session_uuid,
+                    EncryptedChatMessage.user_id == uuid.UUID(user_id),
+                    EncryptedChatMessage.is_deleted == False
+                )
+            )
+        )
+
+        messages = result.scalars().all()
+
+        if not messages:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Keine Nachrichten in dieser Session gefunden"
+            )
+
+        # Soft delete all messages
+        deleted_count = 0
+        for message in messages:
+            message.is_deleted = True
+            message.deleted_at = datetime.utcnow()
+            deleted_count += 1
+
+        await db.commit()
+
+        logger.info(f"Encrypted session deleted: {session_id} ({deleted_count} messages)")
+
+        return {
+            "success": True,
+            "message": f"{deleted_count} verschlüsselte Nachrichten erfolgreich gelöscht",
+            "deleted_count": deleted_count
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete encrypted session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verschlüsselte Session konnte nicht gelöscht werden"
         )
