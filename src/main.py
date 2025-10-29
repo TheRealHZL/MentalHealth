@@ -239,7 +239,12 @@ def create_application() -> FastAPI:
     
     # Add GZip compression
     app.add_middleware(GZipMiddleware, minimum_size=1000)
-    
+
+    # Add Row-Level Security (RLS) middleware for user isolation
+    from src.core.rls_fastapi_middleware import RLSMiddleware
+    app.add_middleware(RLSMiddleware)
+    logger.info("✅ RLS Middleware enabled for database-level user isolation")
+
     # Add custom middleware for request ID and timing
     @app.middleware("http")
     async def add_request_metadata(request: Request, call_next):
