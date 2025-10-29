@@ -8,6 +8,8 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
+from fastapi import Request, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import secrets
 import logging
 
@@ -248,27 +250,50 @@ def create_rate_limit_dependency(limit: int = 30, window_minutes: int = 60):
 # Authentication Dependencies
 # =============================================================================
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends
 
 security_scheme = HTTPBearer()
 
 
 async def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme)
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme)
 ) -> str:
-    """Get current user ID from JWT token"""
-    
-    token = credentials.credentials
+    """
+    Get current user ID from JWT token
+
+    Token extraction priority:
+    1. httpOnly Cookie (secure, XSS-protected)
+    2. Authorization Header (backward compatibility)
+    """
+    token = None
+
+    # Priority 1: Try to get token from httpOnly cookie (more secure!)
+    if "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
+
+    # Priority 2: Fallback to Authorization header (backward compatibility)
+    elif credentials:
+        token = credentials.credentials
+
+    # No token found
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated. Please login.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Verify token
     payload = verify_token(token)
-    
+
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(
@@ -276,7 +301,7 @@ async def get_current_user_id(
             detail="Invalid token payload",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     return user_id
 
 

@@ -181,34 +181,52 @@ def create_application() -> FastAPI:
         openapi_url="/openapi.json" if settings.ENVIRONMENT != "production" else None
     )
     
-    # Configure CORS - Allow Frontend
-    # In development: Allow all origins for easier testing
-    # In production: Restrict to specific domains
-    cors_origins = ["*"]  # Default for development
-
+    # Configure CORS - Strict in production, relaxed in development
     if settings.ENVIRONMENT == "production":
-        # In production, only allow specific origins
+        # Production: ONLY allow verified domains (NO localhost!)
         cors_origins = [
-            "http://localhost:4555",
-            "http://127.0.0.1:4555",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
             "https://mindbridge.app",
             "https://www.mindbridge.app",
             "https://api.mindbridge.app"
         ]
-        # Add custom allowed origins from environment if configured
+
+        # Add custom production origins from environment (if configured)
         if hasattr(settings, 'CORS_ORIGINS') and settings.CORS_ORIGINS != "*":
             custom_origins = settings.CORS_ORIGINS.split(",")
-            cors_origins.extend([origin.strip() for origin in custom_origins])
+            # Filter out localhost/127.0.0.1 for security
+            safe_origins = [
+                origin.strip() for origin in custom_origins
+                if not ("localhost" in origin.lower() or "127.0.0.1" in origin)
+            ]
+            cors_origins.extend(safe_origins)
+
+        logger.info(f"🔒 Production CORS: Allowed origins = {cors_origins}")
+
+    else:
+        # Development/Staging: Allow localhost for testing
+        cors_origins = [
+            "http://localhost:3000",
+            "http://localhost:4555",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:4555",
+            "http://localhost:8080",  # Alternative dev port
+        ]
+        logger.info(f"🔓 Development CORS: Allowing localhost origins")
 
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["X-Process-Time", "X-Request-ID"]
+        allow_credentials=True,  # Required for httpOnly cookies
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # Explicit methods only
+        allow_headers=[
+            "Content-Type",
+            "Authorization",
+            "Accept",
+            "Accept-Language",
+            "Content-Language",
+            "X-Request-ID"
+        ],  # Only necessary headers
+        expose_headers=["X-Process-Time", "X-Request-ID", "X-API-Version"]
     )
 
     
@@ -326,24 +344,75 @@ def create_application() -> FastAPI:
     # Add custom headers to all responses
     @app.middleware("http")
     async def add_security_headers(request: Request, call_next):
-        """Add security headers to all responses"""
-        
+        """
+        Add comprehensive security headers to all responses
+
+        Implements OWASP security headers best practices:
+        - XSS Protection
+        - Clickjacking Prevention
+        - MIME Sniffing Prevention
+        - Content Security Policy
+        - HTTPS Enforcement
+        """
+
         response = await call_next(request)
-        
-        # Security headers
+
+        # Prevent MIME type sniffing
         response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Prevent clickjacking attacks
         response.headers["X-Frame-Options"] = "DENY"
+
+        # Enable XSS filter in older browsers
         response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Control referrer information
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
-        # HSTS for production
+
+        # Content Security Policy - prevents XSS, injection attacks
+        # Only allow resources from same origin, no inline scripts/styles
+        csp_directives = [
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline'",  # Allow inline styles for now
+            "img-src 'self' data: https:",
+            "font-src 'self' data:",
+            "connect-src 'self'",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "upgrade-insecure-requests"
+        ]
+        response.headers["Content-Security-Policy"] = "; ".join(csp_directives)
+
+        # Permissions Policy - disable unnecessary browser features
+        permissions_policy = [
+            "geolocation=()",
+            "microphone=()",
+            "camera=()",
+            "payment=()",
+            "usb=()",
+            "magnetometer=()",
+            "gyroscope=()",
+            "accelerometer=()"
+        ]
+        response.headers["Permissions-Policy"] = ", ".join(permissions_policy)
+
+        # DNS prefetch control
+        response.headers["X-DNS-Prefetch-Control"] = "off"
+
+        # HSTS - Force HTTPS (only in production)
         if settings.ENVIRONMENT == "production":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        
+            # Max age: 1 year, include subdomains, preload in browsers
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+
+        # Remove server identification (security through obscurity)
+        response.headers["Server"] = "MindBridge"
+
         # API metadata
         response.headers["X-API-Version"] = "1.0.0"
         response.headers["X-Platform"] = "MindBridge-AI"
-        
+
         return response
     
     logger.info("🏗️ FastAPI application configured successfully")
