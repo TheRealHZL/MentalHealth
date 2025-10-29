@@ -104,8 +104,13 @@ async def close_database():
         logger.error(f"❌ Error closing database: {e}")
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency to get async database session"""
-    
+    """
+    Dependency to get async database session
+
+    Note: For RLS-protected queries, use get_rls_session from rls_middleware.py
+    This sets the user context automatically.
+    """
+
     async with AsyncSessionLocal() as session:
         try:
             yield session
