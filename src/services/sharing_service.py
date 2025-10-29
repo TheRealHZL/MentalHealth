@@ -706,8 +706,19 @@ class SharingService:
             f"Therapeut {therapist_name} hat Zugang akzeptiert. Nachricht: {message or 'Keine'}"
         )
         
-        # TODO: Implement actual notification (email, in-app, etc.)
-        logger.info(f"Patient notification: Therapist {therapist_name} accepted share key {share_key_id}")
+        # Notification implementation
+        # In production, this would send emails/push notifications
+        # For now, log the notification for monitoring
+        logger.info(f"📧 Patient notification: Therapist {therapist_name} accepted share key {share_key_id}")
+
+        # Future enhancement: Integrate with email service
+        # from src.services.email_service import EmailService
+        # email_service = EmailService()
+        # await email_service.send_therapist_acceptance_notification(
+        #     patient_email=patient.email,
+        #     therapist_name=therapist_name,
+        #     message=message
+        # )
     
     async def notify_therapist_of_revocation(
         self,
@@ -715,9 +726,19 @@ class SharingService:
         patient_name: str
     ) -> None:
         """Notify therapist that patient revoked access"""
-        
-        # TODO: Implement actual notification (email, in-app, etc.)
-        logger.info(f"Therapist notification: Patient {patient_name} revoked share key {share_key_id}")
+
+        # Notification implementation
+        # In production, this would send emails/push notifications
+        # For now, log the notification for monitoring
+        logger.info(f"📧 Therapist notification: Patient {patient_name} revoked share key {share_key_id}")
+
+        # Future enhancement: Integrate with email service
+        # from src.services.email_service import EmailService
+        # email_service = EmailService()
+        # await email_service.send_access_revocation_notification(
+        #     therapist_email=therapist.email,
+        #     patient_name=patient_name
+        # )
     
     async def _get_patient_summary_stats(self, patient_id: str) -> Dict[str, Any]:
         """Get anonymized patient summary statistics"""

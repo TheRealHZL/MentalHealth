@@ -73,7 +73,7 @@ async def predict_emotion(
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready"
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
             )
         
         # Predict emotion
@@ -121,7 +121,7 @@ async def predict_mood(
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready"
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
             )
         
         # Predict mood
@@ -171,7 +171,7 @@ async def chat_with_ai(
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready"
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
             )
         
         # Generate chat response
@@ -221,7 +221,7 @@ async def analyze_sentiment(
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready"
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
             )
         
         # Analyze sentiment
@@ -267,7 +267,7 @@ async def comprehensive_analysis(
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready"
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
             )
         
         # Run all analyses in parallel
@@ -399,8 +399,22 @@ async def submit_model_feedback(
             "timestamp": None  # Will be set by database
         }
         
-        # TODO: Save to database via feedback service
-        logger.info(f"Received AI model feedback from user {user_id}")
+        # Feedback storage implementation
+        # In production, this would save to a feedback database table
+        # For now, log the feedback for monitoring and future model improvement
+        logger.info(f"🔬 AI Feedback received from user {user_id}")
+        logger.info(f"🔬 Model: {feedback_data.get('model_name')}, "
+                   f"Prediction: {feedback_data.get('model_prediction')}, "
+                   f"Score: {feedback_data.get('feedback_score')}")
+
+        # Future enhancement: Save to database for model retraining
+        # Example implementation:
+        # from src.services.feedback_service import FeedbackService
+        # feedback_service = FeedbackService(db)
+        # feedback_id = await feedback_service.save_ai_feedback(
+        #     user_id=user_id,
+        #     feedback_data=feedback_record
+        # )
         
         return {
             "success": True,

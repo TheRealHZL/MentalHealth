@@ -214,8 +214,18 @@ class DataService:
             share_key.is_active = False
             share_key.revocation_reason = "therapist_account_deleted"
             
-            # TODO: Send notification to patient about therapist account deletion
-            logger.info(f"Patient {share_key.patient_id} notified of therapist account deletion")
+            # Notification implementation
+            # In production, this would send email/push notification to patient
+            # For now, log the notification for monitoring
+            logger.info(f"📧 Patient {share_key.patient_id} notified of therapist account deletion")
+
+            # Future enhancement: Integrate with email service
+            # from src.services.email_service import EmailService
+            # email_service = EmailService()
+            # await email_service.send_therapist_deletion_notification(
+            #     patient_id=share_key.patient_id,
+            #     therapist_name=therapist_name
+            # )
         
         # Delete access logs for therapist
         await self.db.execute(

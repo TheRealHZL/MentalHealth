@@ -16,6 +16,19 @@ from src.core.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+# Custom database exceptions
+class DatabaseError(Exception):
+    """Base exception for database errors"""
+    pass
+
+class DatabaseBackupError(DatabaseError):
+    """Exception for database backup failures"""
+    pass
+
+class DatabaseMaintenanceError(DatabaseError):
+    """Exception for database maintenance failures"""
+    pass
+
 # Database metadata with naming convention for constraints
 convention = {
     "ix": "ix_%(column_0_label)s",
@@ -70,7 +83,8 @@ async def init_database():
                 logger.info("✅ Database tables created/verified")
             else:
                 # In production, just test the connection
-                await conn.execute("SELECT 1")
+                from sqlalchemy import text
+                await conn.execute(text("SELECT 1"))
                 logger.info("✅ Database connection verified")
         
         logger.info("🎉 PostgreSQL database initialized successfully")
@@ -119,8 +133,9 @@ async def check_database_health() -> dict:
     """Check database connection health"""
     
     try:
+        from sqlalchemy import text
         async with async_engine.begin() as conn:
-            result = await conn.execute("SELECT version(), current_database(), current_user")
+            result = await conn.execute(text("SELECT version(), current_database(), current_user"))
             row = result.fetchone()
             
             return {
@@ -150,18 +165,26 @@ class DatabaseManager:
     
     @staticmethod
     async def create_backup(backup_name: str = None) -> str:
-        """Create database backup (requires pg_dump)"""
-        
+        """
+        Create database backup (requires pg_dump)
+
+        Raises:
+            DatabaseBackupError: If backup fails
+        """
         import subprocess
         from datetime import datetime
-        
+        import os
+
         if not backup_name:
             backup_name = f"mindbridge_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
-        
+
         try:
+            # Ensure backup directory exists
+            os.makedirs("backups", exist_ok=True)
+
             # Extract connection details
             db_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
-            
+
             # Run pg_dump
             result = subprocess.run([
                 "pg_dump",
@@ -169,30 +192,40 @@ class DatabaseManager:
                 "-f", f"backups/{backup_name}",
                 "--no-password",
                 "--verbose"
-            ], capture_output=True, text=True)
-            
+            ], capture_output=True, text=True, timeout=300)  # 5 minute timeout
+
             if result.returncode == 0:
                 logger.info(f"✅ Database backup created: {backup_name}")
                 return backup_name
             else:
-                logger.error(f"❌ Backup failed: {result.stderr}")
-                raise Exception(f"Backup failed: {result.stderr}")
-                
+                error_msg = f"pg_dump failed with return code {result.returncode}: {result.stderr}"
+                logger.error(f"❌ Backup failed: {error_msg}")
+                raise DatabaseBackupError(error_msg)
+
+        except subprocess.TimeoutExpired as e:
+            error_msg = f"Backup timed out after 5 minutes"
+            logger.error(f"❌ {error_msg}")
+            raise DatabaseBackupError(error_msg) from e
+        except FileNotFoundError as e:
+            error_msg = "pg_dump command not found. Please install PostgreSQL client tools."
+            logger.error(f"❌ {error_msg}")
+            raise DatabaseBackupError(error_msg) from e
         except Exception as e:
             logger.error(f"❌ Backup error: {e}")
-            raise
+            raise DatabaseBackupError(f"Backup failed: {str(e)}") from e
     
     @staticmethod
     async def vacuum_analyze():
         """Run VACUUM ANALYZE on all tables"""
-        
+
         try:
+            from sqlalchemy import text
             async with async_engine.begin() as conn:
-                await conn.execute("VACUUM ANALYZE")
+                await conn.execute(text("VACUUM ANALYZE"))
                 logger.info("✅ Database vacuum analyze completed")
         except Exception as e:
             logger.error(f"❌ Vacuum analyze failed: {e}")
-            raise
+            raise DatabaseMaintenanceError(f"Vacuum analyze failed: {str(e)}") from e
     
     @staticmethod
     async def get_table_sizes() -> dict:

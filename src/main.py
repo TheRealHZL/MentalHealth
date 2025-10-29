@@ -18,6 +18,7 @@ import os
 from src.core.config import get_settings
 from src.core.database import init_database, close_database
 from src.api import api_router
+from src.ai.engine import AIEngine
 
 # Configure logging
 logging.basicConfig(
@@ -42,17 +43,24 @@ async def lifespan(app: FastAPI):
         
         # Initialize AI Engine (if available)
         try:
-            # This would initialize your custom AI engine
-            app.state.ai_engine = None  # Placeholder for AI engine
-            logger.info("✅ AI Engine initialized")
+            # Create AI Engine instance
+            ai_engine = AIEngine()
+            await ai_engine.initialize()
+            app.state.ai_engine = ai_engine
+            logger.info("✅ AI Engine initialized successfully")
         except Exception as e:
             logger.warning(f"⚠️ AI Engine initialization failed: {e}")
-            app.state.ai_engine = None
+            logger.warning("⚠️ AI features will be disabled. Models need to be trained first.")
+            # Create engine but don't initialize to allow training endpoints to work
+            app.state.ai_engine = AIEngine()
+            app.state.ai_engine.is_initialized = False
         
         # Create necessary directories
         os.makedirs("data/uploads", exist_ok=True)
         os.makedirs("data/licenses", exist_ok=True)
         os.makedirs("data/exports", exist_ok=True)
+        os.makedirs("data/models", exist_ok=True)
+        os.makedirs("data/static", exist_ok=True)
         logger.info("✅ Directories created")
         
         logger.info("🎉 MindBridge AI Platform started successfully!")
@@ -73,8 +81,9 @@ async def lifespan(app: FastAPI):
         
         # Cleanup AI Engine
         if hasattr(app.state, 'ai_engine') and app.state.ai_engine:
-            # Cleanup AI engine if needed
-            pass
+            if app.state.ai_engine.is_initialized:
+                await app.state.ai_engine.cleanup()
+                logger.info("✅ AI Engine cleaned up")
         
         logger.info("👋 MindBridge AI Platform shut down gracefully")
         
@@ -173,15 +182,29 @@ def create_application() -> FastAPI:
     )
     
     # Configure CORS - Allow Frontend
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
+    # In development: Allow all origins for easier testing
+    # In production: Restrict to specific domains
+    cors_origins = ["*"]  # Default for development
+
+    if settings.ENVIRONMENT == "production":
+        # In production, only allow specific origins
+        cors_origins = [
             "http://localhost:4555",
             "http://127.0.0.1:4555",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
-            "http://192.168.8.102:4555",
-        ] if settings.ENVIRONMENT == "production" and hasattr(settings, 'ALLOWED_HOSTS') else ["*"],
+            "https://mindbridge.app",
+            "https://www.mindbridge.app",
+            "https://api.mindbridge.app"
+        ]
+        # Add custom allowed origins from environment if configured
+        if hasattr(settings, 'CORS_ORIGINS') and settings.CORS_ORIGINS != "*":
+            custom_origins = settings.CORS_ORIGINS.split(",")
+            cors_origins.extend([origin.strip() for origin in custom_origins])
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
