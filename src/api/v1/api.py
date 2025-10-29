@@ -13,7 +13,8 @@ from src.api.v1.endpoints import (
     thoughts,  # therapy notes
     sharing,
     analytics,
-    ai_training  # AI training endpoints
+    ai_training,  # AI training endpoints
+    encryption  # Client-side encryption endpoints
 )
 
 # Create main v1 router
@@ -92,6 +93,15 @@ api_router.include_router(
         403: {"description": "Forbidden - Admin/Therapist access required"},
         404: {"description": "Not found"},
         429: {"description": "Too many requests"}
+    }
+)
+
+api_router.include_router(
+    encryption.router,
+    # prefix already set in encryption.py as "/encryption"
+    responses={
+        401: {"description": "Unauthorized"},
+        404: {"description": "Not found"}
     }
 )
 
