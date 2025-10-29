@@ -29,8 +29,8 @@ therapy_rate_limit = create_rate_limit_dependency(limit=30, window_minutes=60)
 
 @router.post("/", response_model=TherapyNoteResponse)
 async def create_therapy_note(
-    note_data: TherapyNoteCreate,
     request: Request,
+    note_data: TherapyNoteCreate,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_async_session),
     _rate_limit = Depends(therapy_rate_limit)
@@ -163,8 +163,8 @@ async def get_therapy_note(
 @router.put("/{note_id}", response_model=TherapyNoteResponse)
 async def update_therapy_note(
     note_id: str,
-    update_data: TherapyNoteUpdate,
     request: Request,
+    update_data: TherapyNoteUpdate,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:
@@ -254,9 +254,9 @@ async def delete_therapy_note(
 
 @router.post("/quick-reflection")
 async def quick_reflection(
+    request: Request,
     reflection_text: str = Query(..., min_length=10, max_length=1000, description="Schnelle Reflexion"),
     current_mood: int = Query(..., ge=1, le=10, description="Aktuelle Stimmung"),
-    request: Request,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_async_session),
     _rate_limit = Depends(therapy_rate_limit)
@@ -331,8 +331,8 @@ Gib mir einfühlsames Feedback und 2-3 konkrete Anregungen für weitere Selbstre
 
 @router.get("/analytics/progress")
 async def get_therapy_progress(
-    days: int = Query(30, ge=7, le=365, description="Anzahl Tage für Analyse"),
     request: Request,
+    days: int = Query(30, ge=7, le=365, description="Anzahl Tage für Analyse"),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:

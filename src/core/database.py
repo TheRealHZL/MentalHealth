@@ -226,35 +226,6 @@ class DatabaseManager:
             logger.error(f"❌ Failed to get table sizes: {e}")
             return {"error": str(e)}
 
-# Connection event handlers
-from sqlalchemy import event
-
-@event.listens_for(async_engine.sync_engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    """Set connection-level settings for PostgreSQL"""
-    
-    if "postgresql" in settings.DATABASE_URL:
-        with dbapi_connection.cursor() as cursor:
-            # Set timezone
-            cursor.execute("SET timezone = 'UTC'")
-            
-            # Set statement timeout (30 seconds)
-            cursor.execute("SET statement_timeout = '30s'")
-            
-            # Set lock timeout
-            cursor.execute("SET lock_timeout = '10s'")
-
-@event.listens_for(async_engine.sync_engine, "checkout")
-def ping_connection(dbapi_connection, connection_record, connection_proxy):
-    """Ping connection on checkout to ensure it's alive"""
-    
-    try:
-        dbapi_connection.cursor().execute("SELECT 1")
-    except Exception:
-        # Connection is stale, invalidate it
-        connection_proxy._pool.logger.info("Connection ping failed, invalidating connection")
-        raise
-
 # Database monitoring
 class DatabaseMetrics:
     """Database metrics collection"""

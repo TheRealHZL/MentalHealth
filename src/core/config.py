@@ -4,10 +4,12 @@ Application Configuration
 Zentrale Konfiguration für die MindBridge AI Platform.
 """
 
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import List, Optional
 import os
 from functools import lru_cache
+
 
 class Settings(BaseSettings):
     """Application settings"""
@@ -29,14 +31,37 @@ class Settings(BaseSettings):
     DATABASE_ECHO: bool = Field(default=False, env="DATABASE_ECHO")
     
     # CORS and Security
-    ALLOWED_HOSTS: List[str] = Field(default=["*"], env="ALLOWED_HOSTS")
-    CORS_ORIGINS: List[str] = Field(default=["*"], env="CORS_ORIGINS")
+    ALLOWED_HOSTS: str = Field(default="*", env="ALLOWED_HOSTS")
+    CORS_ORIGINS: str = Field(default="*", env="CORS_ORIGINS")
     HTTPS_ONLY: bool = Field(default=False, env="HTTPS_ONLY")
     
     # AI Configuration
     AI_ENGINE_ENABLED: bool = Field(default=True, env="AI_ENGINE_ENABLED")
     AI_ENGINE_URL: Optional[str] = Field(default=None, env="AI_ENGINE_URL")
     AI_ENGINE_API_KEY: Optional[str] = Field(default=None, env="AI_ENGINE_API_KEY")
+    
+    # AI Model Configuration
+    AI_DEVICE: str = Field(default="cpu", env="AI_DEVICE")
+    AI_TEMPERATURE: float = Field(default=0.7, env="AI_TEMPERATURE")
+    AI_TOP_P: float = Field(default=0.9, env="AI_TOP_P")
+    AI_TOP_K: int = Field(default=50, env="AI_TOP_K")
+    AI_MAX_LENGTH: int = Field(default=512, env="AI_MAX_LENGTH")
+    MAX_RESPONSE_LENGTH: int = Field(default=300, env="MAX_RESPONSE_LENGTH")
+    
+    # Model Paths
+    TOKENIZER_PATH: str = Field(default="data/models/tokenizer.pkl", env="TOKENIZER_PATH")
+    EMOTION_MODEL_PATH: str = Field(default="data/models/emotion_classifier.pt", env="EMOTION_MODEL_PATH")
+    MOOD_MODEL_PATH: str = Field(default="data/models/mood_predictor.pt", env="MOOD_MODEL_PATH")
+    CHAT_MODEL_PATH: str = Field(default="data/models/chat_generator.pt", env="CHAT_MODEL_PATH")
+    
+    # Model Architecture Parameters
+    VOCAB_SIZE: int = Field(default=10000, env="VOCAB_SIZE")
+    EMBEDDING_DIM: int = Field(default=128, env="EMBEDDING_DIM")
+    HIDDEN_DIM: int = Field(default=256, env="HIDDEN_DIM")
+    NUM_LAYERS: int = Field(default=2, env="NUM_LAYERS")
+    NUM_HEADS: int = Field(default=8, env="NUM_HEADS")
+    FF_DIM: int = Field(default=512, env="FF_DIM")
+    DROPOUT_RATE: float = Field(default=0.1, env="DROPOUT_RATE")
     
     # Email Configuration
     SMTP_HOST: Optional[str] = Field(default=None, env="SMTP_HOST")
@@ -49,10 +74,11 @@ class Settings(BaseSettings):
     # File Storage
     UPLOAD_DIR: str = Field(default="data/uploads", env="UPLOAD_DIR")
     MAX_UPLOAD_SIZE: int = Field(default=10 * 1024 * 1024, env="MAX_UPLOAD_SIZE")  # 10MB
-    ALLOWED_FILE_TYPES: List[str] = Field(default=["pdf", "jpg", "jpeg", "png"], env="ALLOWED_FILE_TYPES")
+    ALLOWED_FILE_TYPES: str = Field(default="pdf,jpg,jpeg,png", env="ALLOWED_FILE_TYPES")
     
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = Field(default=True, env="RATE_LIMIT_ENABLED")
+
     DEFAULT_RATE_LIMIT: int = Field(default=100, env="DEFAULT_RATE_LIMIT")  # per hour
     AUTH_RATE_LIMIT: int = Field(default=5, env="AUTH_RATE_LIMIT")  # per 15 minutes
     
@@ -104,6 +130,9 @@ class Settings(BaseSettings):
         """Get allowed hosts"""
         if self.is_development():
             return ["*"]
+        # Parse comma-separated string to list
+        if isinstance(self.ALLOWED_HOSTS, str):
+            return [h.strip() for h in self.ALLOWED_HOSTS.split(",")]
         return self.ALLOWED_HOSTS
 
 @lru_cache()
@@ -111,16 +140,18 @@ def get_settings() -> Settings:
     """Get cached settings instance"""
     return Settings()
 
+
 # Environment-specific configurations
 class DevelopmentSettings(Settings):
     """Development environment settings"""
     DEBUG: bool = True
     DATABASE_ECHO: bool = True
-    CORS_ORIGINS: List[str] = ["*"]
-    ALLOWED_HOSTS: List[str] = ["*"]
+    CORS_ORIGINS: str = "*"
+    ALLOWED_HOSTS: str = "*"
     HTTPS_ONLY: bool = False
 
 class ProductionSettings(Settings):
+
     """Production environment settings"""
     DEBUG: bool = False
     DATABASE_ECHO: bool = False
@@ -171,8 +202,8 @@ def validate_configuration(settings: Settings):
             errors.append("Must specify explicit ALLOWED_HOSTS in production")
     
     # AI configuration
-    if settings.AI_ENGINE_ENABLED and not settings.AI_ENGINE_URL:
-        errors.append("AI_ENGINE_URL required when AI_ENGINE_ENABLED is True")
+    # if settings.AI_ENGINE_ENABLED and not settings.AI_ENGINE_URL:
+        # errors.append("AI_ENGINE_URL required when AI_ENGINE_ENABLED is True")
     
     # Email configuration
     if settings.EMAIL_VERIFICATION_REQUIRED:

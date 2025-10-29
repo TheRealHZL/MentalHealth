@@ -29,8 +29,8 @@ dream_rate_limit = create_rate_limit_dependency(limit=20, window_minutes=60)
 
 @router.post("/", response_model=DreamEntryResponse)
 async def create_dream_entry(
-    dream_data: DreamEntryCreate,
     request: Request,
+    dream_data: DreamEntryCreate,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_async_session),
     _rate_limit = Depends(dream_rate_limit)
@@ -162,8 +162,8 @@ async def get_dream_entry(
 @router.put("/{entry_id}", response_model=DreamEntryResponse)
 async def update_dream_entry(
     entry_id: str,
-    update_data: DreamEntryUpdate,
     request: Request,
+    update_data: DreamEntryUpdate,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:
@@ -253,9 +253,9 @@ async def delete_dream_entry(
 
 @router.post("/interpret")
 async def interpret_dream_symbols(
+    request: Request,
     symbols: List[str] = Query(..., description="Dream symbols to interpret"),
     dream_context: Optional[str] = Query(None, description="Additional dream context"),
-    request: Request,
     user_id: str = Depends(get_current_user_id),
     _rate_limit = Depends(dream_rate_limit)
 ) -> Dict[str, Any]:
@@ -319,8 +319,8 @@ Gib eine kurze, einfühlsame psychologische Interpretation. Erkläre mögliche B
 
 @router.get("/analytics/patterns")
 async def get_dream_patterns(
-    days: int = Query(30, ge=7, le=365, description="Anzahl Tage für Analyse"),
     request: Request,
+    days: int = Query(30, ge=7, le=365, description="Anzahl Tage für Analyse"),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:
@@ -371,10 +371,10 @@ Erkenne Muster, mögliche Bedeutungen und gib einfühlsame Einblicke in die psyc
 
 @router.post("/quick-entry")
 async def quick_dream_entry(
+    request: Request,
     dream_description: str = Query(..., min_length=10, max_length=500),
     dream_type: str = Query("normal", description="Dream type"),
     mood_after: int = Query(..., ge=1, le=10, description="Mood after waking"),
-    request: Request,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_async_session),
     _rate_limit = Depends(dream_rate_limit)

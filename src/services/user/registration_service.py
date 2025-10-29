@@ -5,8 +5,9 @@ Zuständig für Patient- und Therapeuten-Registrierung.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
-from datetime import date, datetime
+from sqlalchemy import select
+from typing import List, Optional, Dict, Any
+from datetime import date, datetime, timedelta
 import hashlib
 import os
 import logging
@@ -41,7 +42,7 @@ class RegistrationService:
             password_hash=password_hash,
             first_name=first_name,
             last_name=last_name,
-            role=UserRole.PATIENT,
+            role=UserRole.PATIENT.value,  # FIX: Use .value to get string
             date_of_birth=date_of_birth,
             timezone=timezone,
             is_active=True,
@@ -79,7 +80,7 @@ class RegistrationService:
             password_hash=password_hash,
             first_name=first_name,
             last_name=last_name,
-            role=UserRole.THERAPIST,
+            role=UserRole.THERAPIST.value,  # FIX: Use .value to get string
             timezone="Europe/Berlin",
             is_active=True,
             is_verified=False,  # Therapists need manual verification
@@ -159,12 +160,12 @@ class RegistrationService:
         
         # Registrations by role
         patients_result = await self.db.execute(
-            select(func.count(User.id)).where(User.role == UserRole.PATIENT)
+            select(func.count(User.id)).where(User.role == UserRole.PATIENT.value)
         )
         patients_count = patients_result.scalar()
         
         therapists_result = await self.db.execute(
-            select(func.count(User.id)).where(User.role == UserRole.THERAPIST)
+            select(func.count(User.id)).where(User.role == UserRole.THERAPIST.value)
         )
         therapists_count = therapists_result.scalar()
         
@@ -172,7 +173,7 @@ class RegistrationService:
         pending_therapists_result = await self.db.execute(
             select(func.count(User.id)).where(
                 and_(
-                    User.role == UserRole.THERAPIST,
+                    User.role == UserRole.THERAPIST.value,
                     User.is_verified == False
                 )
             )
@@ -200,7 +201,7 @@ class RegistrationService:
     async def generate_welcome_data(self, user: User) -> Dict[str, Any]:
         """Generate welcome data for new user"""
         
-        if user.role == UserRole.PATIENT:
+        if user.role == UserRole.PATIENT.value:
             return {
                 "welcome_message": f"Willkommen bei MindBridge, {user.first_name}!",
                 "getting_started": [
@@ -237,7 +238,7 @@ class RegistrationService:
                 ]
             }
         
-        elif user.role == UserRole.THERAPIST:
+        elif user.role == UserRole.THERAPIST.value:
             return {
                 "welcome_message": f"Willkommen bei MindBridge, Dr. {user.last_name}!",
                 "verification_status": {

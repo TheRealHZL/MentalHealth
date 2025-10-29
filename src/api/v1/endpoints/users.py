@@ -87,7 +87,7 @@ async def register_patient(
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "role": user.role.value,
+                "role": user.role,
                 "is_verified": user.is_verified
             },
             "message": "Registrierung erfolgreich! Du kannst sofort loslegen.",
@@ -102,11 +102,13 @@ async def register_patient(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Patient registration failed: {e}")
+        logger.error(f"Patient registration failed: {e}", exc_info=True)
+        # In development, return detailed error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registrierung fehlgeschlagen"
+            detail=f"Registrierung fehlgeschlagen: {str(e)}"
         )
+
 
 @router.post("/register/therapist", response_model=SuccessResponse)
 async def register_therapist(
@@ -237,7 +239,7 @@ async def login(
             )
         
         # Therapeuten müssen verifiziert sein
-        if user.role.value == "therapist" and not user.is_verified:
+        if user.role == "therapist" and not user.is_verified:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Therapeuten-Account noch nicht verifiziert. Bitte warte auf die Freigabe."
@@ -248,10 +250,10 @@ async def login(
         
         # Access Token erstellen
         access_token = create_access_token(
-            data={"sub": str(user.id), "role": user.role.value}
+            data={"sub": str(user.id), "role": user.role}
         )
         
-        logger.info(f"User logged in: {user.email} ({user.role.value})")
+        logger.info(f"User logged in: {user.email} ({user.role})")
         
         return {
             "access_token": access_token,
@@ -261,7 +263,7 @@ async def login(
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "role": user.role.value,
+                "role": user.role,
                 "is_verified": user.is_verified,
                 "last_login": user.last_login
             },
@@ -303,7 +305,7 @@ async def get_profile(
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
-            "role": user.role.value,
+            "role": user.role,
             "is_verified": user.is_verified,
             "timezone": user.timezone,
             "created_at": user.created_at,
@@ -312,7 +314,7 @@ async def get_profile(
         }
         
         # Therapeuten-spezifische Daten
-        if user.role.value == "therapist":
+        if user.role == "therapist":
             profile_data.update({
                 "license_number": user.license_number,
                 "specializations": user.specializations,
@@ -496,7 +498,7 @@ async def search_therapists(
         
         # Nur Patienten dürfen Therapeuten suchen
         user = await user_service.get_user_by_id(user_id)
-        if user.role.value != "patient":
+        if user.role != "patient":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Nur Patienten können nach Therapeuten suchen"

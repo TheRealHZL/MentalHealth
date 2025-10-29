@@ -16,6 +16,15 @@ class EmailService:
         self.sender_email = "noreply@mindbridge.com"
         self.sender_name = "MindBridge Team"
     
+    async def send_welcome_email(
+        self, 
+        to_email: str, 
+        first_name: str, 
+        has_therapist: bool = False
+    ) -> bool:
+        """Send welcome email (alias for send_patient_welcome_email)"""
+        return await self.send_patient_welcome_email(to_email, first_name, has_therapist)
+    
     async def send_patient_welcome_email(
         self, 
         email: str, 

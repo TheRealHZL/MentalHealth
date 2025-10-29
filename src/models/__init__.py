@@ -47,6 +47,26 @@ from .sharing_models import (
     SharingStatistics
 )
 
+# Chat Models
+from .chat import (
+    ChatSession,
+    ChatMessage,
+    ChatAnalysis,
+    ChatTemplate,
+    ConversationFlow
+)
+
+# Training Models
+from .training import (
+    TrainingDataset,
+    TrainingJob,
+    ModelVersion,
+    PredictionLog,
+    ModelEvaluation,
+    TrainingDataSample,
+    AIModelDeployment
+)
+
 # Export all models for easy importing
 __all__ = [
     # User models
@@ -74,13 +94,31 @@ __all__ = [
     "TherapistNoteAccess",
     "DataSharingAudit",
     "PatientSharingPreferences",
-    "SharingStatistics"
+    "SharingStatistics",
+    
+    # Chat models
+    "ChatSession",
+    "ChatMessage",
+    "ChatAnalysis",
+    "ChatTemplate",
+    "ConversationFlow",
+    
+    # Training models
+    "TrainingDataset",
+    "TrainingJob",
+    "ModelVersion",
+    "PredictionLog",
+    "ModelEvaluation",
+    "TrainingDataSample",
+    "AIModelDeployment"
 ]
 
 # Model categories for easy access
 USER_MODELS = [User, LoginAttempt, UserSession, UserNotification, UserActivityLog]
 CONTENT_MODELS = [MoodEntry, DreamEntry, TherapyNote]
 SHARING_MODELS = [ShareKey, ShareKeyAccessLog, TherapistNoteAccess, DataSharingAudit, PatientSharingPreferences, SharingStatistics]
+CHAT_MODELS = [ChatSession, ChatMessage, ChatAnalysis, ChatTemplate, ConversationFlow]
+TRAINING_MODELS = [TrainingDataset, TrainingJob, ModelVersion, PredictionLog, ModelEvaluation, TrainingDataSample, AIModelDeployment]
 
 # All models for migration and initialization
-ALL_MODELS = USER_MODELS + CONTENT_MODELS + SHARING_MODELS
+ALL_MODELS = USER_MODELS + CONTENT_MODELS + SHARING_MODELS + CHAT_MODELS + TRAINING_MODELS

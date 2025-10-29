@@ -28,7 +28,7 @@ from src.schemas.chat import (
     ChatModelEvaluationRequest, ChatModelEvaluationResponse
 )
 from src.models.training import TrainingDataset, TrainingJob, ModelVersion
-from src.core.ai_engine import get_ai_engine
+from src.ai.engine import AIEngine
 from src.core.config import get_settings
 
 router = APIRouter()

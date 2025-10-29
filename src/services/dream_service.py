@@ -36,7 +36,7 @@ class DreamService:
         
         dream_entry = DreamEntry(
             user_id=uuid.UUID(user_id),
-            dream_date=dream_data.date,
+            dream_date=dream_data.dream_date,
             dream_type=dream_data.dream_type,
             title=dream_data.title,
             description=dream_data.description,

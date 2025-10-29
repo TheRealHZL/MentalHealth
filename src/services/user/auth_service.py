@@ -5,9 +5,9 @@ Zuständig für Login, Authentication und User-Retrieval.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import Optional
-from datetime import datetime
+from sqlalchemy import select, func, and_, desc
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timedelta
 import uuid
 import logging
 

@@ -51,7 +51,7 @@ class TrainingDataset(Base):
     
     # Metadata and tags
     tags = Column(ARRAY(String), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    dataset_metadata = Column(JSON, nullable=True)  # Renamed from 'metadata' to avoid SQLAlchemy conflict
     schema_definition = Column(JSON, nullable=True)
     
     # User and access control
@@ -71,8 +71,9 @@ class TrainingDataset(Base):
     last_used_for_training = Column(DateTime, nullable=True)
     
     # Relationships
-    training_jobs = relationship("TrainingJob", back_populates="datasets")
+    # training_jobs = relationship("TrainingJob", back_populates="datasets")  # Disabled - no FK
     creator = relationship("User", back_populates="training_datasets")
+
     
     def __repr__(self):
         return f"<TrainingDataset(id={self.id}, name={self.name}, type={self.dataset_type})>"
@@ -142,14 +143,15 @@ class TrainingJob(Base):
     notification_channels = Column(ARRAY(String), nullable=True)
     
     # Metadata
-    metadata = Column(JSON, nullable=True)
+    job_metadata = Column(JSON, nullable=True)
     
     # Relationships
-    datasets = relationship("TrainingDataset", back_populates="training_jobs")
+    # datasets = relationship("TrainingDataset", back_populates="training_jobs")  # Disabled - no FK
     starter = relationship("User", back_populates="training_jobs", foreign_keys=[started_by])
     model_versions = relationship("ModelVersion", back_populates="training_job")
     parent_job = relationship("TrainingJob", remote_side=[id])
     child_jobs = relationship("TrainingJob", back_populates="parent_job")
+
     
     def __repr__(self):
         return f"<TrainingJob(id={self.id}, model={self.model_name}, status={self.status})>"
@@ -228,7 +230,7 @@ class ModelVersion(Base):
     
     # Metadata and tags
     tags = Column(ARRAY(String), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    model_metadata = Column(JSON, nullable=True)
     changelog = Column(JSON, nullable=True)
     
     # Relationships
@@ -378,7 +380,7 @@ class TrainingDataSample(Base):
     # Sample data
     input_data = Column(JSON, nullable=False)
     output_data = Column(JSON, nullable=False)
-    metadata = Column(JSON, nullable=True)
+    sample_metadata = Column(JSON, nullable=True)
     
     # Quality and validation
     is_validated = Column(Boolean, default=False, nullable=False)

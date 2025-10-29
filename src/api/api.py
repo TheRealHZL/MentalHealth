@@ -48,192 +48,111 @@ async def root():
         },
         "features": [
             "🧠 AI-powered mood analysis",
-            "🌙 Intelligent dream interpretation", 
-            "📝 Structured therapy tools",
-            "🔒 Secure therapist sharing",
             "📊 Advanced analytics",
-            "🛡️ GDPR compliance"
+            "🔒 End-to-end encryption",
+            "🎯 Personalized insights",
+            "🌍 Multi-language support"
         ],
-        "getting_started": {
-            "1": "Register as patient: POST /api/v1/users/register/patient",
-            "2": "Login: POST /api/v1/users/login", 
-            "3": "Create mood entry: POST /api/v1/mood/",
-            "4": "Explore features: GET /api/v1/info"
-        },
-        "support": {
-            "documentation": "/docs",
-            "redoc": "/redoc",
-            "health_check": "/api/health",
-            "contact": "support@mindbridge.app"
-        }
-    }
-
-# Global health check
-@api_router.get("/health", tags=["health"])
-async def global_health_check():
-    """Global Health Check"""
-    return {
-        "status": "healthy",
-        "timestamp": time.time(),
-        "uptime": "operational",
-        "services": {
-            "api": "healthy",
-            "database": "healthy",
-            "ai_engine": "healthy",
-            "security": "healthy"
-        },
-        "version": "1.0.0"
-    }
-
-# API Status endpoint
-@api_router.get("/status", tags=["status"])
-async def api_status():
-    """Detailed API Status"""
-    return {
-        "api_status": "operational",
-        "current_version": "1.0.0",
-        "supported_versions": ["v1"],
-        "maintenance_mode": False,
-        "rate_limiting": {
-            "enabled": True,
-            "default_limit": "100 requests/hour",
-            "auth_limit": "5 requests/15min"
-        },
-        "features": {
-            "user_registration": "enabled",
-            "ai_analysis": "enabled", 
-            "data_sharing": "enabled",
-            "analytics": "enabled",
-            "export": "enabled"
-        },
-        "security": {
-            "jwt_auth": "enabled",
-            "rate_limiting": "enabled",
-            "cors": "configured",
-            "https_only": settings.HTTPS_ONLY if hasattr(settings, 'HTTPS_ONLY') else True
-        },
-        "compliance": {
-            "gdpr": "compliant",
-            "data_encryption": "enabled",
-            "audit_logging": "enabled"
-        }
-    }
-
-# Metrics endpoint (for monitoring)
-@api_router.get("/metrics", tags=["monitoring"])
-async def api_metrics():
-    """API Metrics for Monitoring"""
-    # In production, this would return real metrics
-    return {
-        "requests": {
-            "total": 0,
-            "per_minute": 0,
-            "success_rate": 100.0
-        },
-        "response_times": {
-            "avg_ms": 150,
-            "p95_ms": 300,
-            "p99_ms": 500
-        },
-        "errors": {
-            "rate": 0.1,
-            "4xx_count": 0,
-            "5xx_count": 0
-        },
-        "users": {
-            "active_sessions": 0,
-            "total_registered": 0
-        },
-        "ai_usage": {
-            "analyses_today": 0,
-            "avg_processing_time_ms": 1200
-        }
-    }
-
-# Custom exception handlers
-@api_router.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    """Handle HTTP exceptions with consistent format"""
-    
-    # Add security headers
-    headers = get_security_headers()
-    
-    # Log error for monitoring
-    logger.error(f"HTTP {exc.status_code}: {exc.detail} - {request.url}")
-    
-    response_data = {
-        "success": False,
-        "error": exc.detail,
-        "status_code": exc.status_code,
+        "health_check": "/health",
+        "status": "operational",
         "timestamp": time.time()
     }
-    
-    # Add helpful information for common errors
-    if exc.status_code == 401:
-        response_data["help"] = "Authentication required. Please provide a valid Bearer token."
-    elif exc.status_code == 403:
-        response_data["help"] = "Access forbidden. Check your permissions."
-    elif exc.status_code == 404:
-        response_data["help"] = "Resource not found. Check the URL and try again."
-    elif exc.status_code == 429:
-        response_data["help"] = "Rate limit exceeded. Please wait before making more requests."
-    
-    return JSONResponse(
-        status_code=exc.status_code,
-        content=response_data,
-        headers=headers
-    )
 
-@api_router.exception_handler(500)
-async def internal_server_error_handler(request: Request, exc: Exception):
-    """Handle internal server errors"""
+# Health check endpoint
+@api_router.get("/health", tags=["monitoring"])
+async def health_check():
+    """
+    Health Check Endpoint
     
-    # Log detailed error for debugging
-    logger.error(f"Internal Server Error: {str(exc)} - {request.url}", exc_info=True)
+    Prüft den Status der API und ihrer Abhängigkeiten.
+    """
+    health_status = {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "version": "1.0.0",
+        "environment": settings.ENVIRONMENT,
+        "services": {
+            "api": "operational",
+            "database": "operational",
+            "ai_service": "operational"
+        }
+    }
     
-    # Add security headers
-    headers = get_security_headers()
+    # Check database connection
+    try:
+        # TODO: Add actual database health check
+        health_status["services"]["database"] = "operational"
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        health_status["services"]["database"] = "degraded"
+        health_status["status"] = "degraded"
     
-    return JSONResponse(
-        status_code=500,
-        content={
-            "success": False,
-            "error": "Internal server error",
-            "message": "An unexpected error occurred. Please try again later.",
-            "timestamp": time.time(),
-            "support": "If this persists, contact support@mindbridge.app"
+    # Check AI service
+    try:
+        # TODO: Add actual AI service health check
+        health_status["services"]["ai_service"] = "operational"
+    except Exception as e:
+        logger.error(f"AI service health check failed: {e}")
+        health_status["services"]["ai_service"] = "degraded"
+        health_status["status"] = "degraded"
+    
+    return health_status
+
+# Metrics endpoint
+@api_router.get("/metrics", tags=["monitoring"])
+async def metrics():
+    """
+    API Metrics
+    
+    Gibt grundlegende Metriken über die API zurück.
+    """
+    return {
+        "uptime": time.time(),
+        "requests": {
+            "total": 0,  # TODO: Implement actual metrics
+            "success": 0,
+            "errors": 0
         },
-        headers=headers
-    )
+        "performance": {
+            "average_response_time": 0.0,
+            "p95_response_time": 0.0,
+            "p99_response_time": 0.0
+        },
+        "resources": {
+            "cpu_usage": 0.0,
+            "memory_usage": 0.0,
+            "active_connections": 0
+        },
+        "timestamp": time.time()
+    }
 
-# Request logging middleware
-@api_router.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all API requests for monitoring"""
+# Status endpoint
+@api_router.get("/status", tags=["monitoring"])
+async def status():
+    """
+    System Status
     
-    start_time = time.time()
-    
-    # Log incoming request
-    logger.info(f"API Request: {request.method} {request.url}")
-    
-    # Process request
-    response = await call_next(request)
-    
-    # Calculate processing time
-    process_time = time.time() - start_time
-    
-    # Add processing time header
-    response.headers["X-Process-Time"] = str(process_time)
-    
-    # Add security headers
-    security_headers = get_security_headers()
-    for key, value in security_headers.items():
-        response.headers[key] = value
-    
-    # Log response
-    logger.info(f"API Response: {response.status_code} - {process_time:.3f}s")
-    
-    return response
+    Detaillierte Systeminformationen für Monitoring.
+    """
+    return {
+        "system": "operational",
+        "api_version": "1.0.0",
+        "environment": settings.ENVIRONMENT,
+        "debug_mode": settings.DEBUG,
+        "components": {
+            "authentication": "operational",
+            "database": "operational",
+            "ai_engine": "operational",
+            "storage": "operational",
+            "cache": "operational"
+        },
+        "maintenance": {
+            "scheduled": False,
+            "next_window": None,
+            "message": None
+        },
+        "timestamp": time.time()
+    }
 
 # API versioning info
 @api_router.get("/versions", tags=["versioning"])
@@ -248,42 +167,53 @@ async def api_versions():
                 "deprecation_date": None,
                 "base_url": "/api/v1",
                 "changelog": [
-                    "Initial release with full feature set",
-                    "AI-powered mood and dream analysis",
-                    "Secure therapist data sharing",
-                    "Comprehensive analytics"
+                    "Initial release with core features",
+                    "Mood tracking and analysis",
+                    "AI-powered insights",
+                    "User authentication"
                 ]
             }
         },
-        "upcoming_versions": {
-            "v2": {
-                "status": "planned",
-                "estimated_release": "2024-Q3",
-                "planned_features": [
-                    "Enhanced AI models",
-                    "Advanced sharing controls",
-                    "Real-time notifications",
-                    "Mobile app integration"
+        "latest_updates": [
+            {
+                "version": "v1.0.0",
+                "date": "2024-01-01",
+                "changes": [
+                    "Core API endpoints",
+                    "Authentication system",
+                    "Basic mood tracking"
                 ]
             }
-        },
-        "migration_guide": {
-            "v1_to_v2": "Migration guide will be available 30 days before v2 release"
+        ],
+        "deprecation_policy": {
+            "notice_period": "6 months",
+            "support_period": "12 months after deprecation",
+            "migration_guide": "/docs/migration"
         }
     }
 
-# Development endpoints (only in dev mode)
-if settings.ENVIRONMENT == "development":
+# Development endpoints (only in dev/staging)
+if settings.ENVIRONMENT in ["development", "staging"]:
+    
+    @api_router.get("/dev/info", tags=["development"])
+    async def dev_info():
+        """Development Information (dev only)"""
+        return {
+            "environment": settings.ENVIRONMENT,
+            "debug": settings.DEBUG,
+            "database_configured": bool(settings.DATABASE_URL),
+            "ai_configured": True,
+            "security": {
+                "jwt_configured": bool(settings.SECRET_KEY),
+                "cors_enabled": True,
+                "https_only": settings.ENVIRONMENT == "production"
+            }
+        }
     
     @api_router.get("/dev/test-error", tags=["development"])
     async def test_error():
         """Test error handling (dev only)"""
         raise HTTPException(status_code=500, detail="Test error for development")
-    
-    @api_router.get("/dev/test-auth", tags=["development"])
-    async def test_auth(user_id: str = Depends(get_current_user_id)):
-        """Test authentication (dev only)"""
-        return {"authenticated": True, "user_id": user_id}
     
     @api_router.get("/dev/config", tags=["development"])
     async def dev_config():

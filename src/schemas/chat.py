@@ -4,10 +4,12 @@ Chat Schemas
 Pydantic Schemas für AI Chat System und Conversation Management.
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import Field, validator
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
+
+from .base import BaseSchema
 
 # =============================================================================
 # Chat Session Schemas
@@ -49,7 +51,7 @@ class CrisisLevel(str, Enum):
     HIGH = "high"
     SEVERE = "severe"
 
-class ChatSessionCreate(BaseModel):
+class ChatSessionCreate(BaseSchema):
     """Create chat session schema"""
     session_type: SessionType = Field(SessionType.GENERAL_SUPPORT, description="Type of chat session")
     session_title: Optional[str] = Field(None, max_length=200, description="Optional session title")
@@ -68,7 +70,7 @@ class ChatSessionCreate(BaseModel):
                     raise ValueError('Goals must be at least 3 characters long')
         return v
 
-class ChatSessionResponse(BaseModel):
+class ChatSessionResponse(BaseSchema):
     """Chat session response schema"""
     id: str
     session_type: SessionType
@@ -85,7 +87,7 @@ class ChatSessionResponse(BaseModel):
     crisis_detected: bool = False
     crisis_level: Optional[CrisisLevel] = None
 
-class ChatSessionSummary(BaseModel):
+class ChatSessionSummary(BaseSchema):
     """Chat session summary schema"""
     session_id: str
     duration_minutes: Optional[float]
@@ -137,7 +139,7 @@ class TherapeuticIntent(str, Enum):
     REFLECTION = "reflection"
     CLOSURE = "closure"
 
-class ChatMessage(BaseModel):
+class ChatMessage(BaseSchema):
     """Chat message input schema"""
     content: str = Field(..., min_length=1, max_length=5000, description="Message content")
     message_type: Optional[MessageType] = Field(MessageType.CHAT, description="Type of message")
@@ -167,7 +169,7 @@ class ChatMessage(BaseModel):
                     raise ValueError(f'Invalid emotion: {emotion}')
         return v
 
-class ChatMessageResponse(BaseModel):
+class ChatMessageResponse(BaseSchema):
     """Chat message response schema"""
     id: str
     session_id: str
@@ -194,7 +196,7 @@ class ChatMessageResponse(BaseModel):
     recommended_actions: Optional[List[str]] = None
     resource_suggestions: Optional[List[str]] = None
 
-class StreamingChatResponse(BaseModel):
+class StreamingChatResponse(BaseSchema):
     """Streaming chat response schema"""
     chunk_id: str
     session_id: str
@@ -217,7 +219,7 @@ class AnalysisType(str, Enum):
     EFFECTIVENESS = "effectiveness"
     COMPREHENSIVE = "comprehensive"
 
-class ChatAnalysisRequest(BaseModel):
+class ChatAnalysisRequest(BaseSchema):
     """Chat analysis request schema"""
     analysis_type: AnalysisType = Field(AnalysisType.COMPREHENSIVE, description="Type of analysis")
     include_sentiment: bool = Field(True, description="Include sentiment analysis")
@@ -227,7 +229,7 @@ class ChatAnalysisRequest(BaseModel):
     analysis_scope: str = Field("full_session", description="Scope of analysis")
     custom_date_range: Optional[Dict[str, datetime]] = Field(None, description="Custom date range")
 
-class ChatAnalysisResponse(BaseModel):
+class ChatAnalysisResponse(BaseSchema):
     """Chat analysis response schema"""
     session_id: str
     analysis_type: AnalysisType
@@ -247,7 +249,7 @@ class ChatAnalysisResponse(BaseModel):
 # Crisis Detection Schemas
 # =============================================================================
 
-class CrisisDetectionResponse(BaseModel):
+class CrisisDetectionResponse(BaseSchema):
     """Crisis detection response schema"""
     session_id: str
     crisis_detected: bool
@@ -261,7 +263,7 @@ class CrisisDetectionResponse(BaseModel):
     assessment_timestamp: datetime
     intervention_triggered: Optional[str] = None
 
-class EmergencyResource(BaseModel):
+class EmergencyResource(BaseSchema):
     """Emergency resource schema"""
     name: str
     type: str  # hotline, emergency, professional
@@ -286,7 +288,7 @@ class TemplateType(str, Enum):
     ENCOURAGEMENT = "encouragement"
     RESOURCE_SHARING = "resource_sharing"
 
-class ChatTemplateCreate(BaseModel):
+class ChatTemplateCreate(BaseSchema):
     """Create chat template schema"""
     template_name: str = Field(..., min_length=3, max_length=100)
     template_type: TemplateType
@@ -298,7 +300,7 @@ class ChatTemplateCreate(BaseModel):
     session_type: Optional[SessionType] = None
     crisis_level: Optional[CrisisLevel] = None
 
-class ChatTemplateResponse(BaseModel):
+class ChatTemplateResponse(BaseSchema):
     """Chat template response schema"""
     id: str
     template_name: str
@@ -326,7 +328,7 @@ class FlowType(str, Enum):
     GOAL_SETTING = "goal_setting"
     REFLECTION = "reflection"
 
-class ConversationFlowCreate(BaseModel):
+class ConversationFlowCreate(BaseSchema):
     """Create conversation flow schema"""
     flow_name: str = Field(..., min_length=3, max_length=100)
     flow_type: FlowType
@@ -337,7 +339,7 @@ class ConversationFlowCreate(BaseModel):
     therapeutic_approaches: Optional[List[TherapeuticApproach]] = Field(None)
     estimated_duration_minutes: Optional[int] = Field(None, ge=5, le=120)
 
-class ConversationFlowResponse(BaseModel):
+class ConversationFlowResponse(BaseSchema):
     """Conversation flow response schema"""
     id: str
     flow_name: str
@@ -354,7 +356,7 @@ class ConversationFlowResponse(BaseModel):
 # Chat Training Data Schemas
 # =============================================================================
 
-class ChatTrainingPair(BaseModel):
+class ChatTrainingPair(BaseSchema):
     """Chat training data pair schema"""
     user_input: str = Field(..., min_length=1, max_length=5000)
     ai_response: str = Field(..., min_length=1, max_length=5000)
@@ -385,7 +387,7 @@ class ChatTrainingPair(BaseModel):
             }
         }
 
-class ChatTrainingDataCreate(BaseModel):
+class ChatTrainingDataCreate(BaseSchema):
     """Create chat training dataset schema"""
     dataset_name: str = Field(..., min_length=3, max_length=100)
     description: str = Field(..., min_length=10, max_length=1000)
@@ -413,7 +415,7 @@ class ChatTrainingDataCreate(BaseModel):
         
         return v
 
-class ChatTrainingDataResponse(BaseModel):
+class ChatTrainingDataResponse(BaseSchema):
     """Chat training data response schema"""
     dataset_id: str
     dataset_name: str
@@ -432,7 +434,7 @@ class ChatTrainingDataResponse(BaseModel):
 # Chat Model Training Schemas
 # =============================================================================
 
-class ChatModelTrainingRequest(BaseModel):
+class ChatModelTrainingRequest(BaseSchema):
     """Chat model training request schema"""
     model_name: str = Field(..., min_length=3, max_length=100)
     base_model: str = Field("chat_therapist_base", description="Base model to fine-tune")
@@ -461,7 +463,7 @@ class ChatModelTrainingRequest(BaseModel):
     early_stopping: bool = Field(True, description="Enable early stopping")
     save_best_model: bool = Field(True, description="Save best performing model")
 
-class ChatModelTrainingResponse(BaseModel):
+class ChatModelTrainingResponse(BaseSchema):
     """Chat model training response schema"""
     training_job_id: str
     model_name: str
@@ -473,7 +475,7 @@ class ChatModelTrainingResponse(BaseModel):
     current_epoch: Optional[int] = None
     current_metrics: Optional[Dict[str, float]] = None
 
-class ChatModelEvaluationRequest(BaseModel):
+class ChatModelEvaluationRequest(BaseSchema):
     """Chat model evaluation request schema"""
     model_id: str = Field(..., description="Model ID to evaluate")
     test_conversations: List[Dict[str, Any]] = Field(..., min_items=1, max_items=1000)
@@ -483,7 +485,7 @@ class ChatModelEvaluationRequest(BaseModel):
     )
     human_evaluation: bool = Field(False, description="Include human evaluation")
 
-class ChatModelEvaluationResponse(BaseModel):
+class ChatModelEvaluationResponse(BaseSchema):
     """Chat model evaluation response schema"""
     model_id: str
     evaluation_id: str
@@ -502,7 +504,7 @@ class ChatModelEvaluationResponse(BaseModel):
 # Chat Analytics Schemas
 # =============================================================================
 
-class ChatAnalyticsRequest(BaseModel):
+class ChatAnalyticsRequest(BaseSchema):
     """Chat analytics request schema"""
     start_date: Optional[datetime] = Field(None, description="Start date for analytics")
     end_date: Optional[datetime] = Field(None, description="End date for analytics")
@@ -511,7 +513,7 @@ class ChatAnalyticsRequest(BaseModel):
     include_user_satisfaction: bool = Field(True, description="Include user satisfaction data")
     include_crisis_analytics: bool = Field(True, description="Include crisis detection analytics")
 
-class ChatAnalyticsResponse(BaseModel):
+class ChatAnalyticsResponse(BaseSchema):
     """Chat analytics response schema"""
     total_sessions: int
     total_messages: int
@@ -529,17 +531,17 @@ class ChatAnalyticsResponse(BaseModel):
 # Export and Sharing Schemas
 # =============================================================================
 
-class ChatDataExportRequest(BaseModel):
+class ChatDataExportRequest(BaseSchema):
     """Chat data export request schema"""
     session_ids: Optional[List[str]] = Field(None, description="Specific session IDs to export")
     include_ai_responses: bool = Field(True, description="Include AI responses")
     include_analysis: bool = Field(True, description="Include session analysis")
     anonymize_data: bool = Field(True, description="Anonymize personal data")
-    export_format: str = Field("json", regex="^(json|csv|pdf)$", description="Export format")
+    export_format: str = Field("json", pattern="^(json|csv|pdf)$", description="Export format")
     date_range_start: Optional[datetime] = Field(None, description="Start date for export")
     date_range_end: Optional[datetime] = Field(None, description="End date for export")
 
-class ChatDataExportResponse(BaseModel):
+class ChatDataExportResponse(BaseSchema):
     """Chat data export response schema"""
     export_id: str
     export_status: str
@@ -556,17 +558,17 @@ class ChatDataExportResponse(BaseModel):
 # Settings and Preferences Schemas
 # =============================================================================
 
-class ChatPreferences(BaseModel):
+class ChatPreferences(BaseSchema):
     """User chat preferences schema"""
     preferred_therapeutic_approach: Optional[TherapeuticApproach] = None
-    communication_style: str = Field("balanced", regex="^(formal|casual|balanced)$")
-    crisis_detection_sensitivity: str = Field("medium", regex="^(low|medium|high)$")
-    response_length_preference: str = Field("medium", regex="^(short|medium|long)$")
+    communication_style: str = Field("balanced", pattern="^(formal|casual|balanced)$")
+    crisis_detection_sensitivity: str = Field("medium", pattern="^(low|medium|high)$")
+    response_length_preference: str = Field("medium", pattern="^(short|medium|long)$")
     topics_to_avoid: Optional[List[str]] = Field(None, max_items=10)
     emergency_contacts: Optional[List[Dict[str, str]]] = Field(None, max_items=5)
     notification_preferences: Dict[str, bool] = Field(default_factory=dict)
 
-class ChatSettingsUpdate(BaseModel):
+class ChatSettingsUpdate(BaseSchema):
     """Update chat settings schema"""
     preferences: Optional[ChatPreferences] = None
     auto_save_conversations: bool = Field(True)

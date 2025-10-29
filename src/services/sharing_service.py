@@ -14,7 +14,7 @@ import secrets
 import logging
 
 from src.models import (
-    ShareKey, SharePermission, ShareKeyAccessLog, TherapyNoteAccess,
+    ShareKey, SharePermission, ShareKeyAccessLog, TherapistNoteAccess,
     User, UserRole, MoodEntry, DreamEntry, TherapyNote
 )
 from src.schemas.ai import PaginationParams

@@ -1,0 +1,153 @@
+// User Types
+export interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: 'patient' | 'therapist';
+  is_verified: boolean;
+  created_at: string;
+}
+
+// Auth Types
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterPatientRequest {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth?: string;
+  emergency_contact?: string;
+}
+
+export interface RegisterTherapistRequest {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  license_number: string;
+  specialization?: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+  message: string;
+}
+
+// Mood Types
+export interface MoodEntry {
+  id: string;
+  mood_score: number;
+  energy_level: number;
+  stress_level: number;
+  sleep_hours: number;
+  sleep_quality: number;
+  activities: string[];
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface CreateMoodRequest {
+  mood_score: number;
+  energy_level: number;
+  stress_level: number;
+  sleep_hours: number;
+  sleep_quality: number;
+  activities: string[];
+  notes?: string;
+}
+
+// Dream Types
+export interface DreamEntry {
+  id: string;
+  title: string;
+  content: string;
+  mood_tag?: string;
+  lucid: boolean;
+  interpretation?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface CreateDreamRequest {
+  title: string;
+  content: string;
+  mood_tag?: string;
+  lucid?: boolean;
+}
+
+export interface DreamInterpretationRequest {
+  dream_text: string;
+}
+
+// Analytics Types
+export interface MoodTrend {
+  date: string;
+  mood_score: number;
+  energy_level: number;
+  stress_level: number;
+}
+
+export interface OverviewStats {
+  total_mood_entries: number;
+  total_dream_entries: number;
+  average_mood: number;
+  average_energy: number;
+  average_stress: number;
+  average_sleep_hours: number;
+}
+
+export interface WellnessScore {
+  score: number;
+  trend: 'improving' | 'stable' | 'declining';
+  factors: {
+    mood: number;
+    energy: number;
+    sleep: number;
+    stress: number;
+  };
+}
+
+// AI Types
+export interface AIMoodAnalysis {
+  summary: string;
+  insights: string[];
+  recommendations: string[];
+}
+
+export interface AIChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export interface AIChatRequest {
+  message: string;
+  context?: string;
+}
+
+export interface AIChatResponse {
+  response: string;
+  timestamp: string;
+}
+
+// API Response Types
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+export interface ApiError {
+  detail: string;
+  status_code?: number;
+}

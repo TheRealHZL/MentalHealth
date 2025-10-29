@@ -31,7 +31,7 @@ class MoodService:
         
         mood_entry = MoodEntry(
             user_id=uuid.UUID(user_id),
-            entry_date=mood_data.date,
+            entry_date=mood_data.entry_date,
             entry_time=mood_data.time,
             mood_score=mood_data.mood_score.value,
             stress_level=mood_data.stress_level,

@@ -287,7 +287,7 @@ class ChatTemplate(Base):
     # Metadata
     created_by = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     tags = Column(ARRAY(String), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    message_metadata = Column(JSON, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=func.now(), nullable=False)
@@ -340,7 +340,7 @@ class ConversationFlow(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     description = Column(Text, nullable=True)
     tags = Column(ARRAY(String), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    attachment_metadata = Column(JSON, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=func.now(), nullable=False)

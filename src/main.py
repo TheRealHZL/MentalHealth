@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
@@ -172,15 +172,22 @@ def create_application() -> FastAPI:
         openapi_url="/openapi.json" if settings.ENVIRONMENT != "production" else None
     )
     
-    # Configure CORS
+    # Configure CORS - Allow Frontend
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.ALLOWED_HOSTS if hasattr(settings, 'ALLOWED_HOSTS') else ["*"],
+        allow_origins=[
+            "http://localhost:4555",
+            "http://127.0.0.1:4555",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://192.168.8.102:4555",
+        ] if settings.ENVIRONMENT == "production" and hasattr(settings, 'ALLOWED_HOSTS') else ["*"],
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["X-Process-Time", "X-Request-ID"]
     )
+
     
     # Add trusted host middleware for production
     if settings.ENVIRONMENT == "production":

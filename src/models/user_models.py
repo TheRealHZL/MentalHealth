@@ -90,6 +90,25 @@ class User(Base):
     
     login_attempts = relationship("LoginAttempt", back_populates="user", cascade="all, delete-orphan")
     
+    # Training datasets created by this user (for AI training)
+    training_datasets = relationship("TrainingDataset", back_populates="creator")
+    
+    
+    # Training jobs started by this user (for AI training)
+    training_jobs = relationship("TrainingJob", back_populates="starter", foreign_keys="TrainingJob.started_by")
+    
+    # Model versions created by this user
+    model_versions = relationship("ModelVersion", back_populates="creator")
+    
+    # Prediction logs for this user
+    prediction_logs = relationship("PredictionLog", back_populates="user")
+    
+    # Chat sessions for this user
+    chat_sessions = relationship("ChatSession", back_populates="user")
+    
+    # Conversation flows created by this user
+    conversation_flows = relationship("ConversationFlow", back_populates="creator")
+
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
     
@@ -280,7 +299,7 @@ class UserActivityLog(Base):
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     
     # Optional metadata
-    metadata = Column(JSON, nullable=True)
+    activity_metadata = Column(JSON, nullable=True)
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
     

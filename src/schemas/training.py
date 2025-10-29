@@ -4,10 +4,12 @@ AI Training Schemas
 Pydantic Schemas für AI Model Training und Trainingsdaten-Management.
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import Field, validator
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
+
+from .base import BaseSchema
 
 # =============================================================================
 # Training Data Schemas
@@ -62,7 +64,7 @@ class ModelStatus(str, Enum):
 # Training Dataset Schemas
 # =============================================================================
 
-class TrainingDatasetCreate(BaseModel):
+class TrainingDatasetCreate(BaseSchema):
     """Create training dataset schema"""
     name: str = Field(..., min_length=3, max_length=100, description="Dataset name")
     description: str = Field(..., min_length=10, max_length=1000, description="Dataset description")
@@ -79,7 +81,7 @@ class TrainingDatasetCreate(BaseModel):
             raise ValueError('Dataset name cannot be empty')
         return v.strip()
 
-class TrainingDataUpload(BaseModel):
+class TrainingDataUpload(BaseSchema):
     """Training data upload schema"""
     data_type: DatasetType = Field(..., description="Type of training data")
     samples: List[Dict[str, Any]] = Field(..., min_items=1, max_items=10000, description="Training samples")
@@ -96,13 +98,13 @@ class TrainingDataUpload(BaseModel):
                 raise ValueError(f'Sample {i} input and output must be dictionaries')
         return v
 
-class MoodAnalysisTrainingSample(BaseModel):
+class MoodAnalysisTrainingSample(BaseSchema):
     """Mood analysis training sample"""
     input: Dict[str, Any] = Field(..., description="Input features")
     output: Dict[str, Any] = Field(..., description="Expected output")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "input": {
                     "mood_score": 7,
@@ -128,13 +130,13 @@ class MoodAnalysisTrainingSample(BaseModel):
             }
         }
 
-class DreamAnalysisTrainingSample(BaseModel):
+class DreamAnalysisTrainingSample(BaseSchema):
     """Dream analysis training sample"""
     input: Dict[str, Any] = Field(..., description="Dream input data")
     output: Dict[str, Any] = Field(..., description="Dream analysis output")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "input": {
                     "description": "I was flying over a beautiful forest, feeling completely free and peaceful",
@@ -166,7 +168,7 @@ class DreamAnalysisTrainingSample(BaseModel):
             }
         }
 
-class TrainingDatasetResponse(BaseModel):
+class TrainingDatasetResponse(BaseSchema):
     """Training dataset response schema"""
     id: str
     name: str
@@ -188,7 +190,7 @@ class TrainingDatasetResponse(BaseModel):
 # Model Training Schemas
 # =============================================================================
 
-class ModelTrainingRequest(BaseModel):
+class ModelTrainingRequest(BaseSchema):
     """Model training request schema"""
     model_name: str = Field(..., min_length=3, max_length=100, description="Model name")
     model_type: ModelType = Field(..., description="Type of model to train")
@@ -227,7 +229,7 @@ class ModelTrainingRequest(BaseModel):
             raise ValueError('Model name cannot be empty')
         return v.strip()
 
-class ModelTrainingResponse(BaseModel):
+class ModelTrainingResponse(BaseSchema):
     """Model training response schema"""
     job_id: str
     model_name: str
@@ -238,7 +240,7 @@ class ModelTrainingResponse(BaseModel):
     estimated_completion: Optional[datetime]
     message: str
 
-class TrainingJobStatus(BaseModel):
+class TrainingJobStatus(BaseSchema):
     """Training job status schema"""
     job_id: str
     model_name: str
@@ -253,7 +255,7 @@ class TrainingJobStatus(BaseModel):
     error_message: Optional[str] = None
     logs: Optional[List[str]] = None
 
-class TrainingMetrics(BaseModel):
+class TrainingMetrics(BaseSchema):
     """Training metrics schema"""
     epoch: int
     training_loss: float
@@ -268,7 +270,7 @@ class TrainingMetrics(BaseModel):
 # Model Management Schemas
 # =============================================================================
 
-class ModelVersionResponse(BaseModel):
+class ModelVersionResponse(BaseSchema):
     """Model version response schema"""
     id: str
     model_name: str
@@ -285,7 +287,7 @@ class ModelVersionResponse(BaseModel):
     description: Optional[str] = None
     tags: Optional[List[str]] = None
 
-class ModelEvaluationRequest(BaseModel):
+class ModelEvaluationRequest(BaseSchema):
     """Model evaluation request schema"""
     test_data: List[Dict[str, Any]] = Field(..., min_items=1, max_items=1000, description="Test samples")
     evaluation_config: Optional[Dict[str, Any]] = Field(
@@ -304,7 +306,7 @@ class ModelEvaluationRequest(BaseModel):
                 raise ValueError(f'Test sample {i} must contain "input" and "output" fields')
         return v
 
-class ModelEvaluationResponse(BaseModel):
+class ModelEvaluationResponse(BaseSchema):
     """Model evaluation response schema"""
     model_id: str
     evaluation_id: str
@@ -318,7 +320,7 @@ class ModelEvaluationResponse(BaseModel):
 # AI Prediction Schemas
 # =============================================================================
 
-class PredictionRequest(BaseModel):
+class PredictionRequest(BaseSchema):
     """AI prediction request schema"""
     model_type: ModelType = Field(..., description="Type of model to use")
     input_data: Dict[str, Any] = Field(..., description="Input data for prediction")
@@ -326,7 +328,7 @@ class PredictionRequest(BaseModel):
     include_explanation: bool = Field(True, description="Include explanation/reasoning?")
     model_version: Optional[str] = Field(None, description="Specific model version (latest if not specified)")
 
-class PredictionResponse(BaseModel):
+class PredictionResponse(BaseSchema):
     """AI prediction response schema"""
     prediction_id: str
     model_type: ModelType
@@ -338,7 +340,7 @@ class PredictionResponse(BaseModel):
     processing_time_ms: float
     timestamp: datetime
 
-class MoodPredictionResponse(BaseModel):
+class MoodPredictionResponse(BaseSchema):
     """Mood analysis prediction response"""
     mood_analysis: str
     mood_category: str
@@ -349,7 +351,7 @@ class MoodPredictionResponse(BaseModel):
     confidence_score: float
     detailed_insights: Dict[str, Any]
 
-class DreamPredictionResponse(BaseModel):
+class DreamPredictionResponse(BaseSchema):
     """Dream analysis prediction response"""
     interpretation: str
     symbol_meanings: Dict[str, str]
@@ -363,7 +365,7 @@ class DreamPredictionResponse(BaseModel):
 # Data Export Schemas
 # =============================================================================
 
-class TrainingDataExportRequest(BaseModel):
+class TrainingDataExportRequest(BaseSchema):
     """Training data export request"""
     dataset_ids: List[str] = Field(..., min_items=1, description="Dataset IDs to export")
     format: DataFormat = Field(DataFormat.JSON, description="Export format")
@@ -372,7 +374,7 @@ class TrainingDataExportRequest(BaseModel):
     date_range_start: Optional[datetime] = Field(None, description="Export data from this date")
     date_range_end: Optional[datetime] = Field(None, description="Export data until this date")
 
-class TrainingDataExportResponse(BaseModel):
+class TrainingDataExportResponse(BaseSchema):
     """Training data export response"""
     export_id: str
     status: str
@@ -385,7 +387,7 @@ class TrainingDataExportResponse(BaseModel):
 # Analytics Schemas
 # =============================================================================
 
-class TrainingAnalyticsRequest(BaseModel):
+class TrainingAnalyticsRequest(BaseSchema):
     """Training analytics request"""
     start_date: Optional[datetime] = Field(None, description="Analytics start date")
     end_date: Optional[datetime] = Field(None, description="Analytics end date")
@@ -393,7 +395,7 @@ class TrainingAnalyticsRequest(BaseModel):
     include_performance_trends: bool = Field(True, description="Include performance trends?")
     include_usage_stats: bool = Field(True, description="Include usage statistics?")
 
-class TrainingAnalyticsResponse(BaseModel):
+class TrainingAnalyticsResponse(BaseSchema):
     """Training analytics response"""
     period_summary: Dict[str, Any]
     model_performance: Dict[str, Dict[str, float]]
@@ -407,7 +409,7 @@ class TrainingAnalyticsResponse(BaseModel):
 # Batch Processing Schemas
 # =============================================================================
 
-class BatchPredictionRequest(BaseModel):
+class BatchPredictionRequest(BaseSchema):
     """Batch prediction request schema"""
     model_type: ModelType = Field(..., description="Type of model to use")
     input_samples: List[Dict[str, Any]] = Field(..., min_items=1, max_items=1000, description="Input samples")
@@ -423,7 +425,7 @@ class BatchPredictionRequest(BaseModel):
             raise ValueError('Maximum 1000 samples per batch')
         return v
 
-class BatchPredictionResponse(BaseModel):
+class BatchPredictionResponse(BaseSchema):
     """Batch prediction response schema"""
     batch_id: str
     status: str
@@ -439,7 +441,7 @@ class BatchPredictionResponse(BaseModel):
 # Model Deployment Schemas
 # =============================================================================
 
-class ModelDeploymentRequest(BaseModel):
+class ModelDeploymentRequest(BaseSchema):
     """Model deployment request"""
     model_id: str = Field(..., description="Model ID to deploy")
     deployment_environment: str = Field(..., description="Deployment environment")
@@ -452,7 +454,7 @@ class ModelDeploymentRequest(BaseModel):
         description="Health check configuration"
     )
 
-class ModelDeploymentResponse(BaseModel):
+class ModelDeploymentResponse(BaseSchema):
     """Model deployment response"""
     deployment_id: str
     model_id: str

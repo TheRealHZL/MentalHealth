@@ -37,7 +37,7 @@ class TherapyService:
         
         therapy_note = TherapyNote(
             user_id=uuid.UUID(user_id),
-            note_date=note_data.date,
+            note_date=note_data.note_date,
             note_type=note_data.note_type,
             title=note_data.title,
             content=note_data.content,
