@@ -253,8 +253,7 @@ async def chat_with_ai(
 async def analyze_sentiment(
     request: SentimentAnalysisRequest,
     req: Request,
-    user_id: Optional[str] = Depends(get_current_user_id_optional),
-    _rate_limit = Depends(ai_rate_limit)
+    user_id: Optional[str] = Depends(get_current_user_id_optional)
 ) -> Dict[str, Any]:
     """
     Analyze Text Sentiment
@@ -299,8 +298,7 @@ async def analyze_sentiment(
 async def comprehensive_analysis(
     request: ChatRequest,
     req: Request,
-    user_id: Optional[str] = Depends(get_current_user_id_optional),
-    _rate_limit = Depends(ai_rate_limit)
+    user_id: Optional[str] = Depends(get_current_user_id_optional)
 ) -> Dict[str, Any]:
     """
     Comprehensive AI Analysis
@@ -487,8 +485,7 @@ async def submit_model_feedback(
 async def create_encrypted_chat_message(
     chat_data: EncryptedChatMessageCreate,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_async_session),
-    _rate_limit = Depends(ai_rate_limit)
+    db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:
     """
     Store Encrypted Chat Message (Zero-Knowledge)

@@ -16,7 +16,7 @@ from src.core.security import get_current_user_id, get_current_user_role
 from src.core.database import get_async_session
 from src.schemas.chat import ChatTrainingDataCreate, ChatTrainingDataResponse
 from src.schemas.ai import SuccessResponse, PaginatedResponse
-from src.models.training import TrainingDataset
+from src.models.training import TrainingDataset, TrainingJob
 from src.core.config import get_settings
 
 router = APIRouter()
