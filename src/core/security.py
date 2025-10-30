@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-from fastapi import Request, HTTPException, status
+from fastapi import Request, HTTPException, status, Response, Cookie
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import secrets
 import logging
@@ -406,14 +406,139 @@ async def get_current_user_id_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
 ) -> Optional[str]:
     """Get current user ID from JWT token (optional - returns None if no token)"""
-    
+
     if not credentials:
         return None
-    
+
     token = credentials.credentials
     payload = verify_token(token)
-    
+
     if not payload:
         return None
-    
+
     return payload.get("sub")
+
+
+# =============================================================================
+# httpOnly Cookie Management (XSS Protection)
+# =============================================================================
+
+def set_auth_cookie(response: Response, token: str) -> None:
+    """
+    Set httpOnly authentication cookie
+
+    Security features:
+    - httponly=True: JavaScript cannot access (XSS protection)
+    - secure=True: Only sent over HTTPS (in production)
+    - samesite="strict": CSRF protection
+    - max_age: Automatic expiration
+
+    Args:
+        response: FastAPI Response object
+        token: JWT access token
+    """
+    is_production = settings.ENVIRONMENT == "production"
+
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,        # XSS Protection: JavaScript cannot access
+        secure=is_production, # HTTPS only in production
+        samesite="strict",    # CSRF Protection: Only same-site requests
+        max_age=settings.ACCESS_TOKEN_EXPIRE_HOURS * 3600,  # Seconds
+        path="/",             # Available for all routes
+        domain=None           # Current domain only
+    )
+
+    logger.info("httpOnly authentication cookie set successfully")
+
+
+def clear_auth_cookie(response: Response) -> None:
+    """
+    Clear authentication cookie (for logout)
+
+    Args:
+        response: FastAPI Response object
+    """
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        domain=None
+    )
+
+    logger.info("Authentication cookie cleared")
+
+
+def set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    """
+    Set httpOnly refresh token cookie
+
+    Refresh tokens have longer expiration (7 days)
+
+    Args:
+        response: FastAPI Response object
+        refresh_token: JWT refresh token
+    """
+    is_production = settings.ENVIRONMENT == "production"
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=is_production,
+        samesite="strict",
+        max_age=7 * 24 * 3600,  # 7 days in seconds
+        path="/api/v1/auth/refresh",  # Only sent to refresh endpoint
+        domain=None
+    )
+
+    logger.info("httpOnly refresh token cookie set successfully")
+
+
+def clear_refresh_cookie(response: Response) -> None:
+    """
+    Clear refresh token cookie
+
+    Args:
+        response: FastAPI Response object
+    """
+    response.delete_cookie(
+        key="refresh_token",
+        path="/api/v1/auth/refresh",
+        domain=None
+    )
+
+    logger.info("Refresh token cookie cleared")
+
+
+def get_token_from_cookie_or_header(request: Request) -> Optional[str]:
+    """
+    Extract JWT token from httpOnly cookie or Authorization header
+
+    Priority:
+    1. httpOnly cookie (more secure, XSS-protected)
+    2. Authorization header (backward compatibility)
+
+    Args:
+        request: FastAPI Request object
+
+    Returns:
+        JWT token string or None
+    """
+    # Priority 1: Try httpOnly cookie first (more secure)
+    token = request.cookies.get("access_token")
+
+    if token:
+        logger.debug("Token extracted from httpOnly cookie")
+        return token
+
+    # Priority 2: Fallback to Authorization header (backward compatibility)
+    auth_header = request.headers.get("Authorization")
+
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        logger.debug("Token extracted from Authorization header")
+        return token
+
+    logger.debug("No token found in cookie or header")
+    return None
