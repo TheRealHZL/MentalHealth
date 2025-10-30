@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 from typing import Dict, Any
 
-from src.core.security import get_current_user_id
-from src.api.v1.endpoints import auth, mood, dreams, thoughts, feedback, ai, analytics
+from src.core.security import get_current_user_id, require_admin
+from src.api.v1.endpoints import auth, mood, dreams, thoughts, feedback, ai, analytics, admin, ai_training
 
 # Create main API router
 api_router = APIRouter()
@@ -85,6 +85,19 @@ api_router.include_router(
     prefix="/analytics",
     tags=["analytics"],
     dependencies=[Depends(get_current_user_id)]
+)
+
+api_router.include_router(
+    admin.router,
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(require_admin)]
+)
+
+api_router.include_router(
+    ai_training.router,
+    prefix="/ai/training",
+    tags=["ai-training"]
 )
 
 # Global error handler for the API

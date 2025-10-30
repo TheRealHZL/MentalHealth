@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mindbridge
+  name: mentalhealth
   labels:
-    name: mindbridge
+    name: mentalhealth
     environment: production

@@ -1,0 +1,200 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mentalhealth-postgres
+    environment:
+      POSTGRES_USER: mentalhealth
+      POSTGRES_PASSWORD: mentalhealth_dev_password
+      POSTGRES_DB: mentalhealth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mentalhealth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mentalhealth-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: mentalhealth-redis
+    command: redis-server --requirepass mentalhealth_redis_password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mentalhealth-network
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: mentalhealth-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: mentalhealth_db
+      DATABASE_USER: mentalhealth
+      DATABASE_PASSWORD: mentalhealth_dev_password
+      DATABASE_URL: postgresql+asyncpg://mentalhealth:mentalhealth_dev_password@postgres:5432/mentalhealth_db
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: mentalhealth_redis_password
+      REDIS_URL: redis://:mentalhealth_redis_password@redis:6379
+
+      # Security
+      JWT_SECRET: dev-jwt-secret-change-in-production-min-32-chars
+      ENCRYPTION_KEY: dev-encryption-key-32-bytes-long
+      SESSION_SECRET: dev-session-secret-change-in-production
+
+      # AI Configuration (uses custom PyTorch models - no external APIs needed)
+      AI_DEVICE: cpu
+      # Optional external AI services (not required for core functionality):
+      # OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+      # Environment
+      ENVIRONMENT: development
+      LOG_LEVEL: info
+
+      # CORS
+      CORS_ORIGINS: http://localhost:3000,http://frontend:3000
+
+      # API
+      API_PREFIX: /api/v1
+
+      # Rate Limiting
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_REQUESTS: "100"
+      RATE_LIMIT_WINDOW: "60"
+
+    volumes:
+      - backend_data:/app/data
+      - backend_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - mentalhealth-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mentalhealth-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: 1
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - mentalhealth-network
+
+  # Prometheus (Monitoring)
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: mentalhealth-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - mentalhealth-network
+    profiles:
+      - monitoring
+
+  # Grafana (Dashboards)
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: mentalhealth-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - mentalhealth-network
+    profiles:
+      - monitoring
+
+  # pgAdmin (Database Management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mentalhealth-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mentalhealth.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - mentalhealth-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_data:
+    driver: local
+  backend_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  mentalhealth-network:
+    driver: bridge

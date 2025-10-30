@@ -1,0 +1,103 @@
+name: Security Scan
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install safety
+        run: pip install safety
+
+      - name: Run Python dependency scan
+        run: |
+          safety check --file requirements.txt --output text
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit
+        working-directory: ./frontend
+        run: |
+          npm audit --audit-level=moderate
+
+  code-security-scan:
+    name: Code Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Bandit (Python Security)
+        run: |
+          pip install bandit
+          bandit -r src/ -f json -o bandit-report.json || true
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/python
+            p/javascript
+            p/typescript
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Backend image
+        run: docker build -t backend:test -f Dockerfile.production .
+
+      - name: Run Trivy scan on Backend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'backend:test'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Build Frontend image
+        run: docker build -t frontend:test -f frontend/Dockerfile ./frontend
+
+      - name: Run Trivy scan on Frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'frontend:test'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'

@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: mentalhealth
+  labels:
+    app: mentalhealth
+data:
+  # Application Settings
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "info"
+
+  # Database Settings
+  DATABASE_HOST: "postgresql.mentalhealth.svc.cluster.local"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "mentalhealth_db"
+
+  # Redis Settings
+  REDIS_HOST: "redis.mentalhealth.svc.cluster.local"
+  REDIS_PORT: "6379"
+
+  # API Settings
+  API_VERSION: "v1"
+  API_PREFIX: "/api/v1"
+  CORS_ORIGINS: "https://mentalhealth.example.com"
+
+  # Security Settings
+  SESSION_LIFETIME: "3600"
+  PASSWORD_MIN_LENGTH: "12"
+  MAX_LOGIN_ATTEMPTS: "5"
+  LOCKOUT_DURATION: "900"
+
+  # Rate Limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_WINDOW: "60"
+
+  # AI Settings
+  AI_MODEL: "gpt-4"
+  AI_TEMPERATURE: "0.7"
+  AI_MAX_TOKENS: "2000"
+
+  # Feature Flags
+  FEATURE_AI_CHAT: "true"
+  FEATURE_ANALYTICS: "true"
+  FEATURE_NOTIFICATIONS: "true"
