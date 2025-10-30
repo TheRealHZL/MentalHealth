@@ -24,6 +24,7 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.6
 bleach==6.1.0  # HTML sanitization for XSS prevention
+slowapi==0.1.9  # Rate limiting for API endpoints
 
 # Machine Learning (PyTorch Ecosystem)
 torch==2.1.0

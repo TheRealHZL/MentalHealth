@@ -12,7 +12,13 @@ import logging
 import base64
 import uuid
 
-from src.core.security import get_current_user_id_optional, get_current_user_id, create_rate_limit_dependency
+from src.core.security import get_current_user_id_optional, get_current_user_id
+from src.core.rate_limiting import (
+    limiter,
+    AI_CHAT_LIMIT,
+    AI_MOOD_ANALYSIS_LIMIT,
+    GENERAL_API_LIMIT
+)
 from src.schemas.ai import (
     EmotionPredictionRequest, EmotionPredictionResponse,
     MoodPredictionRequest, MoodPredictionResponse,
@@ -29,9 +35,6 @@ from sqlalchemy import select, and_
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Rate limiting for AI endpoints
-ai_rate_limit = create_rate_limit_dependency(limit=100, window_minutes=60)
 
 
 # ========================================
@@ -99,11 +102,11 @@ async def get_ai_status(request: Request) -> Dict[str, Any]:
         )
 
 @router.post("/emotion/predict", response_model=EmotionPredictionResponse)
+@limiter.limit(AI_MOOD_ANALYSIS_LIMIT)  # 30 emotion predictions per minute
 async def predict_emotion(
-    request: ChatRequest,  # Reuse chat request structure
     req: Request,
-    user_id: Optional[str] = Depends(get_current_user_id_optional),
-    _rate_limit = Depends(ai_rate_limit)
+    request: ChatRequest,  # Reuse chat request structure
+    user_id: Optional[str] = Depends(get_current_user_id_optional)
 ) -> Dict[str, Any]:
     """
     Predict Emotion from Text
@@ -147,11 +150,11 @@ async def predict_emotion(
         )
 
 @router.post("/mood/predict", response_model=MoodPredictionResponse)
+@limiter.limit(AI_MOOD_ANALYSIS_LIMIT)  # 30 mood predictions per minute
 async def predict_mood(
-    request: MoodPredictionRequest,
     req: Request,
-    user_id: Optional[str] = Depends(get_current_user_id_optional),
-    _rate_limit = Depends(ai_rate_limit)
+    request: MoodPredictionRequest,
+    user_id: Optional[str] = Depends(get_current_user_id_optional)
 ) -> Dict[str, Any]:
     """
     Predict Mood Score
@@ -197,11 +200,11 @@ async def predict_mood(
         )
 
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit(AI_CHAT_LIMIT)  # 20 AI chat requests per minute
 async def chat_with_ai(
-    request: ChatRequest,
     req: Request,
-    user_id: Optional[str] = Depends(get_current_user_id_optional),
-    _rate_limit = Depends(ai_rate_limit)
+    request: ChatRequest,
+    user_id: Optional[str] = Depends(get_current_user_id_optional)
 ) -> Dict[str, Any]:
     """
     Chat with AI Assistant

@@ -19,6 +19,9 @@ from src.core.config import get_settings
 from src.core.database import init_database, close_database
 from src.api import api_router
 from src.ai.engine import AIEngine
+from src.core.rate_limiting import limiter, rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 # Configure logging
 logging.basicConfig(
@@ -245,6 +248,10 @@ def create_application() -> FastAPI:
     app.add_middleware(RLSMiddleware)
     logger.info("✅ RLS Middleware enabled for database-level user isolation")
 
+    # Add rate limiter to app state
+    app.state.limiter = limiter
+    logger.info("✅ Rate limiter configured for brute force protection")
+
     # Add custom middleware for request ID and timing
     @app.middleware("http")
     async def add_request_metadata(request: Request, call_next):
@@ -322,15 +329,21 @@ def create_application() -> FastAPI:
             }
         }
     
+    # Rate limit exceeded exception handler
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+        """Handle rate limit exceeded errors"""
+        return await rate_limit_exceeded_handler(request, exc)
+
     # Global exception handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         """Global exception handler for unhandled errors"""
-        
+
         request_id = getattr(request.state, 'request_id', 'unknown')
-        
+
         logger.error(f"Unhandled exception [{request_id}]: {str(exc)}", exc_info=True)
-        
+
         return JSONResponse(
             status_code=500,
             content={

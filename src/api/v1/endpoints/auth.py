@@ -17,7 +17,14 @@ from src.core.database import get_async_session
 from src.core.security import (
     create_access_token, create_refresh_token, verify_token,
     get_password_hash, verify_password, get_current_user_id,
-    create_rate_limit_dependency, validate_email, validate_password_strength
+    validate_email, validate_password_strength
+)
+from src.core.rate_limiting import (
+    limiter,
+    AUTH_LOGIN_LIMIT,
+    AUTH_REGISTER_PATIENT_LIMIT,
+    AUTH_REGISTER_THERAPIST_LIMIT,
+    AUTH_REFRESH_TOKEN_LIMIT
 )
 from src.schemas.ai import (
     UserRegistration, UserLogin, UserProfile, UserUpdate,
@@ -31,16 +38,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 security = HTTPBearer()
 
-# Rate limiting für Auth-Endpunkte
-auth_rate_limit = create_rate_limit_dependency(limit=10, window_minutes=15)
-registration_rate_limit = create_rate_limit_dependency(limit=5, window_minutes=60)
-
 @router.post("/register", response_model=SuccessResponse)
+@limiter.limit(AUTH_REGISTER_PATIENT_LIMIT)  # 5 registrations per hour
 async def register_user(
-    user_data: UserRegistration,
     request: Request,
-    db: AsyncSession = Depends(get_async_session),
-    _rate_limit = Depends(registration_rate_limit)
+    user_data: UserRegistration,
+    db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:
     """
     User Registration
@@ -159,12 +162,12 @@ async def register_user(
         )
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit(AUTH_LOGIN_LIMIT)  # 10 login attempts per minute
 async def login_user(
+    request: Request,
     login_data: UserLogin,
     response: Response,
-    request: Request,
-    db: AsyncSession = Depends(get_async_session),
-    _rate_limit = Depends(auth_rate_limit)
+    db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:
     """
     User Login
@@ -257,7 +260,9 @@ async def login_user(
         )
 
 @router.post("/refresh", response_model=TokenResponse)
+@limiter.limit(AUTH_REFRESH_TOKEN_LIMIT)  # 20 token refreshes per hour
 async def refresh_token(
+    request: Request,
     refresh_data: RefreshTokenRequest,
     db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:
