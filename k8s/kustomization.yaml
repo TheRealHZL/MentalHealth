@@ -1,0 +1,97 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mentalhealth
+
+# Base resources
+resources:
+  # Namespace and base config
+  - base/namespace.yaml
+  - base/storageclass.yaml
+  - base/network-policy.yaml
+
+  # ConfigMaps
+  - configmaps/postgres-config.yaml
+  - configmaps/redis-config.yaml
+  - configmaps/app-config.yaml
+
+  # Secrets (update these before deploying!)
+  - secrets/postgres-secret.yaml
+  - secrets/redis-secret.yaml
+  - secrets/app-secrets.yaml
+  - secrets/monitoring-auth.yaml
+
+  # Database layer
+  - database/postgresql-service.yaml
+  - database/postgresql-statefulset.yaml
+
+  # Cache layer
+  - cache/redis-service.yaml
+  - cache/redis-deployment.yaml
+
+  # Ingress
+  - ingress/nginx-ingress-controller.yaml
+  - ingress/ingress-rules.yaml
+
+  # Monitoring
+  - monitoring/prometheus/prometheus-config.yaml
+  - monitoring/prometheus/prometheus-deployment.yaml
+  - monitoring/grafana/grafana-config.yaml
+  - monitoring/grafana/grafana-deployment.yaml
+  - monitoring/alertmanager/alertmanager-config.yaml
+  - monitoring/alertmanager/alertmanager-deployment.yaml
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/name: mentalhealth
+  app.kubernetes.io/part-of: mentalhealth-platform
+  app.kubernetes.io/managed-by: kustomize
+
+# Common annotations
+commonAnnotations:
+  documentation: "https://github.com/your-org/mentalhealth/tree/main/k8s"
+  contact: "devops@mentalhealth.example.com"
+
+# Images (can be used to override image versions)
+images:
+  - name: postgres
+    newTag: 15-alpine
+  - name: redis
+    newTag: 7-alpine
+  - name: prom/prometheus
+    newTag: v2.48.0
+  - name: grafana/grafana
+    newTag: 10.2.2
+  - name: prom/alertmanager
+    newTag: v0.26.0
+
+# ConfigMap generator (optional, can be used instead of files)
+# configMapGenerator:
+#   - name: app-config
+#     literals:
+#       - ENVIRONMENT=production
+#       - LOG_LEVEL=info
+
+# Secret generator (optional, better to use external secret management)
+# secretGenerator:
+#   - name: postgres-secret
+#     literals:
+#       - username=postgres
+#       - password=changeme
+
+# Patches (optional, can be used to modify resources)
+# patches:
+#   - patch: |-
+#       - op: replace
+#         path: /spec/replicas
+#         value: 5
+#     target:
+#       kind: StatefulSet
+#       name: postgresql
+
+# Replicas (can be used to scale resources)
+# replicas:
+#   - name: postgresql
+#     count: 3
+#   - name: redis
+#     count: 3
