@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mindbridge-api
+  namespace: mindbridge
+  labels:
+    app: mindbridge-api
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mindbridge-api
+  template:
+    metadata:
+      labels:
+        app: mindbridge-api
+        tier: backend
+    spec:
+      containers:
+      - name: api
+        image: mindbridge/api:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: mindbridge-secrets
+              key: database-url
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "2000m"
+            memory: "2Gi"
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
