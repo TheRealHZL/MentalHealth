@@ -45,7 +45,7 @@ MentalHealth is a comprehensive, production-ready platform designed to provide m
 
 ### Core Functionality
 
-- **AI Chat Therapy** - Real-time therapeutic conversations powered by OpenAI
+- **AI Chat Therapy** - Real-time therapeutic conversations powered by custom PyTorch AI models
 - **User Authentication** - JWT-based secure authentication with session management
 - **Mood Tracking** - Track and analyze emotional patterns over time
 - **Secure Data Storage** - Encrypted data at rest and in transit
@@ -82,8 +82,7 @@ cd MentalHealth
 
 # 2. Set up environment
 cp .env.example .env
-# Edit .env and add your OpenAI API key
-nano .env
+# No API keys needed! All AI runs locally with custom models
 
 # 3. Start all services
 docker-compose -f docker-compose.full.yaml up -d
