@@ -67,6 +67,15 @@ from .training import (
     AIModelDeployment
 )
 
+# Encrypted Models (Zero-Knowledge Architecture)
+from .encrypted_models import (
+    EncryptedMoodEntry,
+    EncryptedDreamEntry,
+    EncryptedTherapyNote,
+    EncryptedChatMessage,
+    UserEncryptionKey
+)
+
 # Export all models for easy importing
 __all__ = [
     # User models
@@ -110,7 +119,14 @@ __all__ = [
     "PredictionLog",
     "ModelEvaluation",
     "TrainingDataSample",
-    "AIModelDeployment"
+    "AIModelDeployment",
+
+    # Encrypted models
+    "EncryptedMoodEntry",
+    "EncryptedDreamEntry",
+    "EncryptedTherapyNote",
+    "EncryptedChatMessage",
+    "UserEncryptionKey"
 ]
 
 # Model categories for easy access
@@ -119,6 +135,7 @@ CONTENT_MODELS = [MoodEntry, DreamEntry, TherapyNote]
 SHARING_MODELS = [ShareKey, ShareKeyAccessLog, TherapistNoteAccess, DataSharingAudit, PatientSharingPreferences, SharingStatistics]
 CHAT_MODELS = [ChatSession, ChatMessage, ChatAnalysis, ChatTemplate, ConversationFlow]
 TRAINING_MODELS = [TrainingDataset, TrainingJob, ModelVersion, PredictionLog, ModelEvaluation, TrainingDataSample, AIModelDeployment]
+ENCRYPTED_MODELS = [EncryptedMoodEntry, EncryptedDreamEntry, EncryptedTherapyNote, EncryptedChatMessage, UserEncryptionKey]
 
 # All models for migration and initialization
-ALL_MODELS = USER_MODELS + CONTENT_MODELS + SHARING_MODELS + CHAT_MODELS + TRAINING_MODELS
+ALL_MODELS = USER_MODELS + CONTENT_MODELS + SHARING_MODELS + CHAT_MODELS + TRAINING_MODELS + ENCRYPTED_MODELS

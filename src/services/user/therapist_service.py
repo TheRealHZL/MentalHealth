@@ -250,20 +250,27 @@ class TherapistService:
     
     async def notify_admin_for_verification(self, therapist_id: uuid.UUID) -> None:
         """Notify admin about new therapist registration"""
-        
-        # TODO: Implement actual admin notification system
-        # Could be email, Slack, admin dashboard notification, etc.
-        
+
         from .auth_service import AuthService
         auth_service = AuthService(self.db)
-        
+
         therapist = await auth_service.get_user_by_id(str(therapist_id))
-        
+
         if therapist:
-            # Log for now, implement proper notification later
-            logger.info(f"ADMIN NOTIFICATION: New therapist registration - {therapist.email}")
-            
-            # Could send email to admin team
+            # Admin notification implementation
+            # In production, this would send emails/Slack/admin dashboard notifications
+            # For now, log the notification for monitoring
+            logger.info(f"🔔 ADMIN NOTIFICATION: New therapist registration - {therapist.email}")
+            logger.info(f"🔔 Therapist details: ID={therapist_id}, Name={therapist.first_name} {therapist.last_name}")
+
+            # Future enhancement: Implement multi-channel notifications
+            # Options:
+            # 1. Email to admin team (implemented below)
+            # 2. Slack webhook notification
+            # 3. Admin dashboard notification
+            # 4. SMS for urgent verifications
+
+            from src.services.email_service import EmailService
             email_service = EmailService()
             await email_service.send_admin_therapist_notification(
                 therapist_name=f"{therapist.first_name} {therapist.last_name}",

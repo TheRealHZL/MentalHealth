@@ -9,7 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List, Optional
 from datetime import date, datetime
+from pydantic import BaseModel, Field
 import logging
+import base64
+import uuid
 
 from src.core.database import get_async_session
 from src.core.security import get_current_user_id, create_rate_limit_dependency
@@ -19,6 +22,9 @@ from src.schemas.ai import (
 )
 from src.services.mood_service import MoodService
 from src.services.analytics_service import AnalyticsService
+from src.services.encryption_service import EncryptionService
+from src.models.encrypted_models import EncryptedMoodEntry
+from sqlalchemy import select, and_
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +32,39 @@ router = APIRouter()
 
 # Rate limiting für Mood-Endpunkte
 mood_rate_limit = create_rate_limit_dependency(limit=50, window_minutes=60)
+
+
+# ========================================
+# Encrypted Mood Entry Models
+# ========================================
+
+class EncryptedMoodPayload(BaseModel):
+    """Encrypted mood entry payload from client"""
+    ciphertext: str = Field(description="Base64-encoded encrypted data")
+    nonce: str = Field(description="Base64-encoded nonce (12 bytes)")
+    version: int = Field(default=1, description="Encryption version")
+
+
+class EncryptedMoodEntryCreate(BaseModel):
+    """Create encrypted mood entry"""
+    encrypted_data: EncryptedMoodPayload = Field(description="Encrypted mood data")
+    entry_type: str = Field(default="mood", description="Entry type")
+
+
+class EncryptedMoodEntryResponse(BaseModel):
+    """Encrypted mood entry response"""
+    id: str = Field(description="Entry ID")
+    user_id: str = Field(description="User ID")
+    encrypted_data: EncryptedMoodPayload = Field(description="Encrypted data")
+    entry_type: str = Field(description="Entry type")
+    created_at: datetime = Field(description="Creation timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
+    encryption_version: int = Field(description="Encryption version")
+
+
+# ========================================
+# Original Mood Endpoints (Unencrypted)
+# ========================================
 
 @router.post("/", response_model=MoodEntryResponse)
 async def create_mood_entry(
@@ -431,4 +470,275 @@ async def get_personal_mood_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Persönliche Statistiken konnten nicht geladen werden"
+        )
+
+
+# ========================================
+# Encrypted Mood Endpoints (Zero-Knowledge)
+# ========================================
+
+@router.post("/encrypted", response_model=EncryptedMoodEntryResponse)
+async def create_encrypted_mood_entry(
+    mood_data: EncryptedMoodEntryCreate,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session),
+    _rate_limit = Depends(mood_rate_limit)
+) -> Dict[str, Any]:
+    """
+    Create Encrypted Mood Entry (Zero-Knowledge)
+
+    Accepts client-side encrypted mood data. The server CANNOT read the content!
+    Only metadata (timestamps, user_id) is stored unencrypted for queries.
+
+    **Encryption Flow:**
+    1. Client encrypts mood data with AES-256-GCM
+    2. Server receives encrypted blob + nonce
+    3. Server stores encrypted data as-is
+    4. Server NEVER decrypts!
+    """
+    try:
+        # Validate encrypted payload structure
+        payload_dict = {
+            "ciphertext": mood_data.encrypted_data.ciphertext,
+            "nonce": mood_data.encrypted_data.nonce,
+            "version": mood_data.encrypted_data.version
+        }
+
+        is_valid, error_msg = EncryptionService.validate_encrypted_payload(payload_dict)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid encrypted payload: {error_msg}"
+            )
+
+        # Decode base64 to binary for storage
+        ciphertext_bytes = base64.b64decode(mood_data.encrypted_data.ciphertext)
+        nonce_bytes = base64.b64decode(mood_data.encrypted_data.nonce)
+
+        # Combine ciphertext + nonce for storage
+        encrypted_data = ciphertext_bytes + nonce_bytes
+
+        # Validate size
+        is_size_valid, size_error = EncryptionService.validate_encrypted_data_size(encrypted_data)
+        if not is_size_valid:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=size_error
+            )
+
+        # Create encrypted mood entry
+        entry = EncryptedMoodEntry(
+            id=uuid.uuid4(),
+            user_id=uuid.UUID(user_id),
+            encrypted_data=encrypted_data,
+            entry_type=mood_data.entry_type,
+            encryption_version=mood_data.encrypted_data.version,
+            is_deleted=False
+        )
+
+        db.add(entry)
+        await db.commit()
+        await db.refresh(entry)
+
+        logger.info(f"Encrypted mood entry created for user {user_id}")
+
+        # Extract nonce for response (last 12 bytes)
+        stored_ciphertext = entry.encrypted_data[:-12]
+        stored_nonce = entry.encrypted_data[-12:]
+
+        return {
+            "id": str(entry.id),
+            "user_id": str(entry.user_id),
+            "encrypted_data": {
+                "ciphertext": base64.b64encode(stored_ciphertext).decode('utf-8'),
+                "nonce": base64.b64encode(stored_nonce).decode('utf-8'),
+                "version": entry.encryption_version
+            },
+            "entry_type": entry.entry_type,
+            "created_at": entry.created_at,
+            "updated_at": entry.updated_at,
+            "encryption_version": entry.encryption_version
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create encrypted mood entry: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verschlüsselter Stimmungseintrag konnte nicht erstellt werden"
+        )
+
+
+@router.get("/encrypted", response_model=List[EncryptedMoodEntryResponse])
+async def get_encrypted_mood_entries(
+    limit: int = Query(50, ge=1, le=100, description="Max number of entries"),
+    offset: int = Query(0, ge=0, description="Number of entries to skip"),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session)
+) -> List[Dict[str, Any]]:
+    """
+    Get Encrypted Mood Entries (Zero-Knowledge)
+
+    Returns encrypted mood entries. Client must decrypt them.
+    Server returns encrypted blobs as-is.
+    """
+    try:
+        # Query encrypted entries
+        result = await db.execute(
+            select(EncryptedMoodEntry)
+            .where(
+                and_(
+                    EncryptedMoodEntry.user_id == uuid.UUID(user_id),
+                    EncryptedMoodEntry.is_deleted == False
+                )
+            )
+            .order_by(EncryptedMoodEntry.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        entries = result.scalars().all()
+
+        # Format response
+        response = []
+        for entry in entries:
+            # Extract nonce (last 12 bytes)
+            stored_ciphertext = entry.encrypted_data[:-12]
+            stored_nonce = entry.encrypted_data[-12:]
+
+            response.append({
+                "id": str(entry.id),
+                "user_id": str(entry.user_id),
+                "encrypted_data": {
+                    "ciphertext": base64.b64encode(stored_ciphertext).decode('utf-8'),
+                    "nonce": base64.b64encode(stored_nonce).decode('utf-8'),
+                    "version": entry.encryption_version
+                },
+                "entry_type": entry.entry_type,
+                "created_at": entry.created_at,
+                "updated_at": entry.updated_at,
+                "encryption_version": entry.encryption_version
+            })
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Failed to get encrypted mood entries: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verschlüsselte Stimmungseinträge konnten nicht geladen werden"
+        )
+
+
+@router.get("/encrypted/{entry_id}", response_model=EncryptedMoodEntryResponse)
+async def get_encrypted_mood_entry(
+    entry_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session)
+) -> Dict[str, Any]:
+    """
+    Get Single Encrypted Mood Entry
+
+    Returns encrypted entry by ID. Client must decrypt.
+    """
+    try:
+        result = await db.execute(
+            select(EncryptedMoodEntry)
+            .where(
+                and_(
+                    EncryptedMoodEntry.id == uuid.UUID(entry_id),
+                    EncryptedMoodEntry.user_id == uuid.UUID(user_id),
+                    EncryptedMoodEntry.is_deleted == False
+                )
+            )
+        )
+
+        entry = result.scalar_one_or_none()
+
+        if not entry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Verschlüsselter Stimmungseintrag nicht gefunden"
+            )
+
+        # Extract nonce
+        stored_ciphertext = entry.encrypted_data[:-12]
+        stored_nonce = entry.encrypted_data[-12:]
+
+        return {
+            "id": str(entry.id),
+            "user_id": str(entry.user_id),
+            "encrypted_data": {
+                "ciphertext": base64.b64encode(stored_ciphertext).decode('utf-8'),
+                "nonce": base64.b64encode(stored_nonce).decode('utf-8'),
+                "version": entry.encryption_version
+            },
+            "entry_type": entry.entry_type,
+            "created_at": entry.created_at,
+            "updated_at": entry.updated_at,
+            "encryption_version": entry.encryption_version
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get encrypted mood entry: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verschlüsselter Stimmungseintrag konnte nicht geladen werden"
+        )
+
+
+@router.delete("/encrypted/{entry_id}", response_model=SuccessResponse)
+async def delete_encrypted_mood_entry(
+    entry_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session)
+) -> Dict[str, Any]:
+    """
+    Delete Encrypted Mood Entry (Soft Delete)
+
+    Marks entry as deleted (GDPR compliance).
+    """
+    try:
+        result = await db.execute(
+            select(EncryptedMoodEntry)
+            .where(
+                and_(
+                    EncryptedMoodEntry.id == uuid.UUID(entry_id),
+                    EncryptedMoodEntry.user_id == uuid.UUID(user_id),
+                    EncryptedMoodEntry.is_deleted == False
+                )
+            )
+        )
+
+        entry = result.scalar_one_or_none()
+
+        if not entry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Verschlüsselter Stimmungseintrag nicht gefunden"
+            )
+
+        # Soft delete
+        entry.is_deleted = True
+        entry.deleted_at = datetime.utcnow()
+
+        await db.commit()
+
+        logger.info(f"Encrypted mood entry soft-deleted: {entry_id}")
+
+        return {
+            "success": True,
+            "message": "Verschlüsselter Stimmungseintrag erfolgreich gelöscht"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete encrypted mood entry: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verschlüsselter Stimmungseintrag konnte nicht gelöscht werden"
         )

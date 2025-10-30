@@ -60,10 +60,10 @@ async def root():
 
 # Health check endpoint
 @api_router.get("/health", tags=["monitoring"])
-async def health_check():
+async def health_check(request: Request):
     """
     Health Check Endpoint
-    
+
     Prüft den Status der API und ihrer Abhängigkeiten.
     """
     health_status = {
@@ -73,29 +73,40 @@ async def health_check():
         "environment": settings.ENVIRONMENT,
         "services": {
             "api": "operational",
-            "database": "operational",
-            "ai_service": "operational"
+            "database": "unknown",
+            "ai_service": "unknown"
         }
     }
-    
+
     # Check database connection
     try:
-        # TODO: Add actual database health check
+        from src.core.database import async_engine
+        from sqlalchemy import text
+        # Try to execute a simple query to check database connectivity
+        async with async_engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
         health_status["services"]["database"] = "operational"
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         health_status["services"]["database"] = "degraded"
         health_status["status"] = "degraded"
-    
+
     # Check AI service
     try:
-        # TODO: Add actual AI service health check
-        health_status["services"]["ai_service"] = "operational"
+        ai_engine = request.app.state.ai_engine
+        if ai_engine and ai_engine.is_initialized:
+            health_status["services"]["ai_service"] = "operational"
+        elif ai_engine and not ai_engine.is_initialized:
+            health_status["services"]["ai_service"] = "not_initialized"
+            health_status["status"] = "degraded"
+        else:
+            health_status["services"]["ai_service"] = "unavailable"
+            health_status["status"] = "degraded"
     except Exception as e:
         logger.error(f"AI service health check failed: {e}")
-        health_status["services"]["ai_service"] = "degraded"
+        health_status["services"]["ai_service"] = "error"
         health_status["status"] = "degraded"
-    
+
     return health_status
 
 # Metrics endpoint

@@ -18,6 +18,7 @@ import os
 from src.core.config import get_settings
 from src.core.database import init_database, close_database
 from src.api import api_router
+from src.ai.engine import AIEngine
 
 # Configure logging
 logging.basicConfig(
@@ -42,17 +43,24 @@ async def lifespan(app: FastAPI):
         
         # Initialize AI Engine (if available)
         try:
-            # This would initialize your custom AI engine
-            app.state.ai_engine = None  # Placeholder for AI engine
-            logger.info("✅ AI Engine initialized")
+            # Create AI Engine instance
+            ai_engine = AIEngine()
+            await ai_engine.initialize()
+            app.state.ai_engine = ai_engine
+            logger.info("✅ AI Engine initialized successfully")
         except Exception as e:
             logger.warning(f"⚠️ AI Engine initialization failed: {e}")
-            app.state.ai_engine = None
+            logger.warning("⚠️ AI features will be disabled. Models need to be trained first.")
+            # Create engine but don't initialize to allow training endpoints to work
+            app.state.ai_engine = AIEngine()
+            app.state.ai_engine.is_initialized = False
         
         # Create necessary directories
         os.makedirs("data/uploads", exist_ok=True)
         os.makedirs("data/licenses", exist_ok=True)
         os.makedirs("data/exports", exist_ok=True)
+        os.makedirs("data/models", exist_ok=True)
+        os.makedirs("data/static", exist_ok=True)
         logger.info("✅ Directories created")
         
         logger.info("🎉 MindBridge AI Platform started successfully!")
@@ -73,8 +81,9 @@ async def lifespan(app: FastAPI):
         
         # Cleanup AI Engine
         if hasattr(app.state, 'ai_engine') and app.state.ai_engine:
-            # Cleanup AI engine if needed
-            pass
+            if app.state.ai_engine.is_initialized:
+                await app.state.ai_engine.cleanup()
+                logger.info("✅ AI Engine cleaned up")
         
         logger.info("👋 MindBridge AI Platform shut down gracefully")
         
@@ -172,20 +181,52 @@ def create_application() -> FastAPI:
         openapi_url="/openapi.json" if settings.ENVIRONMENT != "production" else None
     )
     
-    # Configure CORS - Allow Frontend
+    # Configure CORS - Strict in production, relaxed in development
+    if settings.ENVIRONMENT == "production":
+        # Production: ONLY allow verified domains (NO localhost!)
+        cors_origins = [
+            "https://mindbridge.app",
+            "https://www.mindbridge.app",
+            "https://api.mindbridge.app"
+        ]
+
+        # Add custom production origins from environment (if configured)
+        if hasattr(settings, 'CORS_ORIGINS') and settings.CORS_ORIGINS != "*":
+            custom_origins = settings.CORS_ORIGINS.split(",")
+            # Filter out localhost/127.0.0.1 for security
+            safe_origins = [
+                origin.strip() for origin in custom_origins
+                if not ("localhost" in origin.lower() or "127.0.0.1" in origin)
+            ]
+            cors_origins.extend(safe_origins)
+
+        logger.info(f"🔒 Production CORS: Allowed origins = {cors_origins}")
+
+    else:
+        # Development/Staging: Allow localhost for testing
+        cors_origins = [
+            "http://localhost:3000",
+            "http://localhost:4555",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:4555",
+            "http://localhost:8080",  # Alternative dev port
+        ]
+        logger.info(f"🔓 Development CORS: Allowing localhost origins")
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:4555",
-            "http://127.0.0.1:4555",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://192.168.8.102:4555",
-        ] if settings.ENVIRONMENT == "production" and hasattr(settings, 'ALLOWED_HOSTS') else ["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["X-Process-Time", "X-Request-ID"]
+        allow_origins=cors_origins,
+        allow_credentials=True,  # Required for httpOnly cookies
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # Explicit methods only
+        allow_headers=[
+            "Content-Type",
+            "Authorization",
+            "Accept",
+            "Accept-Language",
+            "Content-Language",
+            "X-Request-ID"
+        ],  # Only necessary headers
+        expose_headers=["X-Process-Time", "X-Request-ID", "X-API-Version"]
     )
 
     
@@ -198,7 +239,12 @@ def create_application() -> FastAPI:
     
     # Add GZip compression
     app.add_middleware(GZipMiddleware, minimum_size=1000)
-    
+
+    # Add Row-Level Security (RLS) middleware for user isolation
+    from src.core.rls_fastapi_middleware import RLSMiddleware
+    app.add_middleware(RLSMiddleware)
+    logger.info("✅ RLS Middleware enabled for database-level user isolation")
+
     # Add custom middleware for request ID and timing
     @app.middleware("http")
     async def add_request_metadata(request: Request, call_next):
@@ -303,24 +349,75 @@ def create_application() -> FastAPI:
     # Add custom headers to all responses
     @app.middleware("http")
     async def add_security_headers(request: Request, call_next):
-        """Add security headers to all responses"""
-        
+        """
+        Add comprehensive security headers to all responses
+
+        Implements OWASP security headers best practices:
+        - XSS Protection
+        - Clickjacking Prevention
+        - MIME Sniffing Prevention
+        - Content Security Policy
+        - HTTPS Enforcement
+        """
+
         response = await call_next(request)
-        
-        # Security headers
+
+        # Prevent MIME type sniffing
         response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Prevent clickjacking attacks
         response.headers["X-Frame-Options"] = "DENY"
+
+        # Enable XSS filter in older browsers
         response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Control referrer information
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
-        # HSTS for production
+
+        # Content Security Policy - prevents XSS, injection attacks
+        # Only allow resources from same origin, no inline scripts/styles
+        csp_directives = [
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline'",  # Allow inline styles for now
+            "img-src 'self' data: https:",
+            "font-src 'self' data:",
+            "connect-src 'self'",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "upgrade-insecure-requests"
+        ]
+        response.headers["Content-Security-Policy"] = "; ".join(csp_directives)
+
+        # Permissions Policy - disable unnecessary browser features
+        permissions_policy = [
+            "geolocation=()",
+            "microphone=()",
+            "camera=()",
+            "payment=()",
+            "usb=()",
+            "magnetometer=()",
+            "gyroscope=()",
+            "accelerometer=()"
+        ]
+        response.headers["Permissions-Policy"] = ", ".join(permissions_policy)
+
+        # DNS prefetch control
+        response.headers["X-DNS-Prefetch-Control"] = "off"
+
+        # HSTS - Force HTTPS (only in production)
         if settings.ENVIRONMENT == "production":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        
+            # Max age: 1 year, include subdomains, preload in browsers
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+
+        # Remove server identification (security through obscurity)
+        response.headers["Server"] = "MindBridge"
+
         # API metadata
         response.headers["X-API-Version"] = "1.0.0"
         response.headers["X-Platform"] = "MindBridge-AI"
-        
+
         return response
     
     logger.info("🏗️ FastAPI application configured successfully")

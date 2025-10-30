@@ -199,10 +199,10 @@ async def login_user(
         # Tokens erstellen
         access_token = create_access_token(subject=str(user.id))
         refresh_token = create_refresh_token(subject=str(user.id))
-        
+
         # Login-Zeit aktualisieren
         await user_service.update_last_login(user.id)
-        
+
         # Session erstellen (optional für Tracking)
         ip_address = request.client.host
         user_agent = request.headers.get("user-agent", "")
@@ -211,25 +211,40 @@ async def login_user(
             ip_address=ip_address,
             user_agent=user_agent
         )
-        
-        # Secure HTTP-Only Cookie setzen (optional)
-        # response.set_cookie(
-        #     key="refresh_token",
-        #     value=refresh_token,
-        #     httponly=True,
-        #     secure=True,
-        #     samesite="strict"
-        # )
-        
-        logger.info(f"User logged in: {user.email}")
-        
+
+        # Set secure httpOnly cookies for tokens (XSS Protection!)
+        # Access token - short lived
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,  # JavaScript can't access (XSS protection!)
+            secure=request.url.scheme == "https",  # Only over HTTPS in production
+            samesite="strict",  # CSRF protection
+            max_age=30 * 60,  # 30 minutes
+            path="/"
+        )
+
+        # Refresh token - longer lived, more secure
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,  # JavaScript can't access
+            secure=request.url.scheme == "https",  # Only HTTPS
+            samesite="strict",  # Strict CSRF protection
+            max_age=7 * 24 * 60 * 60,  # 7 days
+            path="/api/v1/auth"  # Only sent to auth endpoints
+        )
+
+        logger.info(f"✅ User logged in: {user.email} (Tokens in httpOnly cookies)")
+
+        # Return user info (tokens are in cookies now!)
         return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
-            "expires_in": 30 * 60,  # 30 minutes
+            "success": True,
+            "message": "Login successful",
             "user_id": str(user.id),
-            "role": user.role
+            "role": user.role,
+            "token_type": "cookie",  # Indicate tokens are in cookies
+            "expires_in": 30 * 60  # Access token expiry
         }
         
     except HTTPException:
@@ -400,12 +415,19 @@ async def logout_user(
         
         # Session beenden
         await user_service.end_user_sessions(user_id)
-        
-        # Cookie löschen (falls verwendet)
-        response.delete_cookie("refresh_token")
-        
-        logger.info(f"User logged out: {user_id}")
-        
+
+        # Delete both httpOnly cookies (complete logout)
+        response.delete_cookie(
+            key="access_token",
+            path="/"
+        )
+        response.delete_cookie(
+            key="refresh_token",
+            path="/api/v1/auth"
+        )
+
+        logger.info(f"✅ User logged out: {user_id} (Cookies cleared)")
+
         return {
             "success": True,
             "message": "Erfolgreich abgemeldet"
