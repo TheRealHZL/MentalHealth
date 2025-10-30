@@ -9,6 +9,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from enum import Enum
 import re
+from src.core.sanitization import sanitize_html, sanitize_text
 
 
 class DreamType(str, Enum):
@@ -70,6 +71,33 @@ class DreamEntryCreate(BaseModel):
             raise ValueError('Time must be in HH:MM format')
         return v
 
+    # Input Sanitization Validators (XSS Prevention)
+    @field_validator('title', 'lucidity_trigger', mode='before')
+    @classmethod
+    def sanitize_short_text(cls, v):
+        """Sanitize short text fields (no HTML)"""
+        if v is not None:
+            return sanitize_text(v)
+        return v
+
+    @field_validator('description', 'personal_interpretation', 'life_connection', mode='before')
+    @classmethod
+    def sanitize_long_text(cls, v):
+        """Sanitize long text fields (allow safe HTML)"""
+        if v is not None:
+            return sanitize_html(v, strip=False)
+        return v
+
+    @field_validator('people_in_dream', 'locations', 'objects', 'colors', 'symbols',
+                     'emotions_felt', 'physical_sensations', 'lucid_actions',
+                     'recurring_elements', 'tags', mode='before')
+    @classmethod
+    def sanitize_dream_lists(cls, v):
+        """Sanitize list fields"""
+        if v is not None and isinstance(v, list):
+            return [sanitize_text(item) if isinstance(item, str) else item for item in v]
+        return v
+
 
 class DreamEntryUpdate(BaseModel):
     """Update dream entry schema"""
@@ -82,6 +110,28 @@ class DreamEntryUpdate(BaseModel):
     personal_interpretation: Optional[str] = Field(None, max_length=2000)
     life_connection: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = None
+
+    # Input Sanitization Validators (XSS Prevention)
+    @field_validator('title', mode='before')
+    @classmethod
+    def sanitize_title(cls, v):
+        if v is not None:
+            return sanitize_text(v)
+        return v
+
+    @field_validator('description', 'personal_interpretation', 'life_connection', mode='before')
+    @classmethod
+    def sanitize_text_fields(cls, v):
+        if v is not None:
+            return sanitize_html(v, strip=False)
+        return v
+
+    @field_validator('symbols', 'emotions_felt', 'tags', mode='before')
+    @classmethod
+    def sanitize_lists(cls, v):
+        if v is not None and isinstance(v, list):
+            return [sanitize_text(item) if isinstance(item, str) else item for item in v]
+        return v
 
 
 class DreamEntryResponse(BaseModel):
