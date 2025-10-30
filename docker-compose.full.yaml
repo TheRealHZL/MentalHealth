@@ -66,8 +66,10 @@ services:
       ENCRYPTION_KEY: dev-encryption-key-32-bytes-long
       SESSION_SECRET: dev-session-secret-change-in-production
 
-      # OpenAI (add your key here)
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-your-key-here}
+      # AI Configuration (uses custom PyTorch models - no external APIs needed)
+      AI_DEVICE: cpu
+      # Optional external AI services (not required for core functionality):
+      # OPENAI_API_KEY: ${OPENAI_API_KEY:-}
 
       # Environment
       ENVIRONMENT: development

@@ -40,8 +40,8 @@ cd MentalHealth
 # Copy environment template
 cp .env.example .env
 
-# Edit .env and add your OpenAI API key
-nano .env
+# Edit .env if needed (optional - AI runs locally with custom models)
+# No external API keys required for AI functionality!
 ```
 
 ### Step 3: Start Services
@@ -396,8 +396,10 @@ JWT_SECRET=<min-32-chars-random-string>
 ENCRYPTION_KEY=<32-bytes-base64>
 SESSION_SECRET=<random-string>
 
-# OpenAI
-OPENAI_API_KEY=sk-<your-key>
+# AI Configuration (uses custom PyTorch models - no external APIs needed)
+# Optional external AI services (not required):
+# OPENAI_API_KEY=sk-<your-key>
+# ANTHROPIC_API_KEY=<your-key>
 
 # Environment
 ENVIRONMENT=production

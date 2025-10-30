@@ -108,7 +108,7 @@ MentalHealth/
 git clone <repo-url>
 cd MentalHealth
 cp .env.example .env
-# Edit .env - add OPENAI_API_KEY
+# No API keys needed - AI runs locally with custom models!
 
 # 2. Start everything
 docker-compose -f docker-compose.full.yaml up -d
@@ -299,8 +299,9 @@ See [TESTING_GUIDE.md](TESTING_GUIDE.md) for complete testing documentation.
 - `DATABASE_URL` - PostgreSQL connection
 - `REDIS_URL` - Redis connection
 - `JWT_SECRET` - JWT signing key
-- `OPENAI_API_KEY` - OpenAI API access
+- `AI_DEVICE` - AI device (cpu/cuda) - uses custom PyTorch models
 - `ENVIRONMENT` - deployment environment
+- `OPENAI_API_KEY` - (Optional) External AI service, not required
 
 **Frontend** (.env.local):
 - `NEXT_PUBLIC_API_URL` - Backend API URL

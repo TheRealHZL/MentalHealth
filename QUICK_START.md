@@ -19,9 +19,8 @@ cd MentalHealth
 # Copy environment file
 cp .env.example .env
 
-# Edit .env - Add your OpenAI API key (required)
-nano .env  # or use your favorite editor
-# Set: OPENAI_API_KEY=sk-your-actual-key-here
+# Edit .env if needed (optional - all AI runs locally with custom PyTorch models)
+# No external API keys required!
 ```
 
 ## 2. Start Everything (2 minutes)
