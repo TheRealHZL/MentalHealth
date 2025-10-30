@@ -542,3 +542,44 @@ def get_token_from_cookie_or_header(request: Request) -> Optional[str]:
 
     logger.debug("No token found in cookie or header")
     return None
+
+# =============================================================================
+# Role-Based Access Control
+# =============================================================================
+
+async def require_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme)
+) -> str:
+    """
+    Require admin role
+    
+    Returns user_id if admin, raises 403 otherwise
+    """
+    user_id, user_role = await get_current_user_role(credentials)
+    
+    if user_role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    
+    return user_id
+
+
+async def require_therapist_or_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme)
+) -> str:
+    """
+    Require therapist or admin role
+    
+    Returns user_id if therapist or admin, raises 403 otherwise
+    """
+    user_id, user_role = await get_current_user_role(credentials)
+    
+    if user_role not in ["therapist", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Therapist or admin access required"
+        )
+    
+    return user_id
