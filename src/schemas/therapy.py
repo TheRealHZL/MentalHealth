@@ -4,10 +4,11 @@ Therapy Note Schemas
 Pydantic Schemas für Therapy Notes.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from enum import Enum
+from src.core.sanitization import sanitize_html, sanitize_text
 
 
 class TherapyNoteType(str, Enum):
@@ -82,6 +83,35 @@ class TherapyNoteCreate(BaseModel):
     therapist_can_comment: bool = Field(False, description="Can therapist comment?")
     tags: Optional[List[str]] = None
 
+    # Input Sanitization Validators (XSS Prevention)
+    @field_validator('title', 'therapist_name', 'session_format', mode='before')
+    @classmethod
+    def sanitize_short_fields(cls, v):
+        """Sanitize short text fields (no HTML)"""
+        if v is not None:
+            return sanitize_text(v)
+        return v
+
+    @field_validator('content', 'progress_made', 'key_insights', 'medication_changes', mode='before')
+    @classmethod
+    def sanitize_long_fields(cls, v):
+        """Sanitize long text fields (allow safe HTML for formatting)"""
+        if v is not None:
+            return sanitize_html(v, strip=False)
+        return v
+
+    @field_validator('homework_assigned', 'homework_completed', 'goals_discussed',
+                     'goals_achieved', 'challenges_faced', 'key_emotions',
+                     'breakthrough_moments', 'patterns_recognized', 'action_items',
+                     'next_session_focus', 'medications_discussed', 'side_effects_noted',
+                     'crisis_triggers_identified', 'coping_strategies_practiced', 'tags', mode='before')
+    @classmethod
+    def sanitize_list_fields(cls, v):
+        """Sanitize list fields"""
+        if v is not None and isinstance(v, list):
+            return [sanitize_text(item) if isinstance(item, str) else item for item in v]
+        return v
+
 
 class TherapyNoteUpdate(BaseModel):
     """Update therapy note schema"""
@@ -94,6 +124,28 @@ class TherapyNoteUpdate(BaseModel):
     action_items: Optional[List[str]] = None
     share_with_therapist: Optional[bool] = None
     tags: Optional[List[str]] = None
+
+    # Input Sanitization Validators (XSS Prevention)
+    @field_validator('title', mode='before')
+    @classmethod
+    def sanitize_title(cls, v):
+        if v is not None:
+            return sanitize_text(v)
+        return v
+
+    @field_validator('content', 'progress_made', 'key_insights', mode='before')
+    @classmethod
+    def sanitize_content(cls, v):
+        if v is not None:
+            return sanitize_html(v, strip=False)
+        return v
+
+    @field_validator('goals_discussed', 'action_items', 'tags', mode='before')
+    @classmethod
+    def sanitize_lists(cls, v):
+        if v is not None and isinstance(v, list):
+            return [sanitize_text(item) if isinstance(item, str) else item for item in v]
+        return v
 
 
 class TherapyNoteResponse(BaseModel):
