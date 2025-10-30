@@ -32,27 +32,16 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true, // ✅ Send httpOnly cookies with requests
     });
-
-    // Request interceptor to add auth token
-    this.client.interceptors.request.use(
-      (config) => {
-        const token = this.getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
 
     // Response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Token expired or invalid
-          this.clearToken();
+          // Token expired or invalid - clear user data
+          this.clearUserData();
           if (typeof window !== 'undefined') {
             window.location.href = '/login';
           }
@@ -62,21 +51,9 @@ class ApiClient {
     );
   }
 
-  // Token Management
-  private getToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('token');
-  }
-
-  private setToken(token: string): void {
+  // User Data Management (tokens stored in httpOnly cookies)
+  private clearUserData(): void {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('token', token);
-    }
-  }
-
-  private clearToken(): void {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
   }
@@ -84,7 +61,7 @@ class ApiClient {
   // Auth Endpoints
   async login(data: LoginRequest): Promise<AuthResponse> {
     const response = await this.client.post<AuthResponse>('/users/login', data);
-    this.setToken(response.data.access_token);
+    // Token stored in httpOnly cookie by backend - no localStorage needed!
     if (typeof window !== 'undefined') {
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
@@ -93,7 +70,7 @@ class ApiClient {
 
   async registerPatient(data: RegisterPatientRequest): Promise<AuthResponse> {
     const response = await this.client.post<AuthResponse>('/users/register/patient', data);
-    this.setToken(response.data.access_token);
+    // Token stored in httpOnly cookie by backend - no localStorage needed!
     if (typeof window !== 'undefined') {
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
@@ -102,7 +79,7 @@ class ApiClient {
 
   async registerTherapist(data: RegisterTherapistRequest): Promise<AuthResponse> {
     const response = await this.client.post<AuthResponse>('/users/register/therapist', data);
-    this.setToken(response.data.access_token);
+    // Token stored in httpOnly cookie by backend - no localStorage needed!
     if (typeof window !== 'undefined') {
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
@@ -119,10 +96,18 @@ class ApiClient {
     return response.data;
   }
 
-  logout(): void {
-    this.clearToken();
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+  async logout(): Promise<void> {
+    try {
+      // Call backend logout to clear httpOnly cookies
+      await this.client.post('/users/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear user data and redirect
+      this.clearUserData();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
   }
 
@@ -201,8 +186,10 @@ class ApiClient {
   }
 
   // Helper to check if user is authenticated
+  // Note: With httpOnly cookies, we check if user data exists in localStorage
+  // The actual authentication is verified by backend via cookie
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    return !!this.getCurrentUser();
   }
 
   // Get current user from localStorage
