@@ -101,7 +101,7 @@ export function generateNonce(): string {
  * @returns Base64-encoded hash
  */
 export async function sha256(data: string | ArrayBuffer): Promise<string> {
-  let dataBuffer: ArrayBuffer;
+  let dataBuffer: Uint8Array | ArrayBuffer;
 
   if (typeof data === 'string') {
     const encoder = new TextEncoder();

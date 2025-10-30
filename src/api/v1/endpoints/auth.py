@@ -10,7 +10,8 @@ Registrierung und Login für:
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from datetime import datetime
 import logging
 
 from src.core.database import get_async_session

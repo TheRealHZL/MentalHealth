@@ -214,8 +214,7 @@ def detect_suspicious_patterns(text: str) -> List[str]:
             suspicious.append(f"XSS pattern: {pattern}")
 
     # Path traversal
-    if "../" in text or "..
-" in text:
+    if "../" in text or "..\\" in text:
         suspicious.append("Path traversal attempt")
 
     return suspicious
