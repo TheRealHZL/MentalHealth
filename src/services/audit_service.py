@@ -4,15 +4,16 @@ Audit Service
 Service for querying and analyzing security audit logs.
 """
 
-from typing import List, Optional, Dict, Any
+import logging
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, text, desc
+
+from sqlalchemy import and_, desc, func, or_, select, text
 from sqlalchemy.dialects.postgresql import INET
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.audit import AuditLog
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class AuditService:
         operation: str,
         record_id: Optional[UUID] = None,
         ip_address: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
     ) -> AuditLog:
         """
         Manually create an audit log entry
@@ -49,22 +50,21 @@ class AuditService:
             record_id=record_id,
             ip_address=ip_address,
             timestamp=datetime.utcnow(),
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         session.add(audit)
         await session.commit()
 
-        logger.info(f"✅ Audit log created: {operation} on {table_name} by user {user_id}")
+        logger.info(
+            f"✅ Audit log created: {operation} on {table_name} by user {user_id}"
+        )
 
         return audit
 
     @staticmethod
     async def get_user_activity(
-        session: AsyncSession,
-        user_id: UUID,
-        hours: int = 24,
-        limit: int = 100
+        session: AsyncSession, user_id: UUID, hours: int = 24, limit: int = 100
     ) -> List[AuditLog]:
         """
         Get recent activity for a specific user
@@ -76,12 +76,7 @@ class AuditService:
 
         result = await session.execute(
             select(AuditLog)
-            .where(
-                and_(
-                    AuditLog.user_id == user_id,
-                    AuditLog.timestamp >= cutoff
-                )
-            )
+            .where(and_(AuditLog.user_id == user_id, AuditLog.timestamp >= cutoff))
             .order_by(desc(AuditLog.timestamp))
             .limit(limit)
         )
@@ -90,9 +85,7 @@ class AuditService:
 
     @staticmethod
     async def get_suspicious_activity(
-        session: AsyncSession,
-        hours: int = 24,
-        limit: int = 100
+        session: AsyncSession, hours: int = 24, limit: int = 100
     ) -> List[AuditLog]:
         """
         Get all suspicious activity in the last N hours
@@ -104,12 +97,7 @@ class AuditService:
 
         result = await session.execute(
             select(AuditLog)
-            .where(
-                and_(
-                    AuditLog.suspicious == True,
-                    AuditLog.timestamp >= cutoff
-                )
-            )
+            .where(and_(AuditLog.suspicious == True, AuditLog.timestamp >= cutoff))
             .order_by(desc(AuditLog.timestamp))
             .limit(limit)
         )
@@ -118,10 +106,7 @@ class AuditService:
 
     @staticmethod
     async def get_table_activity(
-        session: AsyncSession,
-        table_name: str,
-        hours: int = 24,
-        limit: int = 100
+        session: AsyncSession, table_name: str, hours: int = 24, limit: int = 100
     ) -> List[AuditLog]:
         """
         Get all activity on a specific table
@@ -134,10 +119,7 @@ class AuditService:
         result = await session.execute(
             select(AuditLog)
             .where(
-                and_(
-                    AuditLog.table_name == table_name,
-                    AuditLog.timestamp >= cutoff
-                )
+                and_(AuditLog.table_name == table_name, AuditLog.timestamp >= cutoff)
             )
             .order_by(desc(AuditLog.timestamp))
             .limit(limit)
@@ -147,8 +129,7 @@ class AuditService:
 
     @staticmethod
     async def get_activity_summary(
-        session: AsyncSession,
-        hours: int = 24
+        session: AsyncSession, hours: int = 24
     ) -> Dict[str, Any]:
         """
         Get summary statistics for audit activity
@@ -166,17 +147,13 @@ class AuditService:
 
         # Total operations
         total = await session.execute(
-            select(func.count(AuditLog.id))
-            .where(AuditLog.timestamp >= cutoff)
+            select(func.count(AuditLog.id)).where(AuditLog.timestamp >= cutoff)
         )
         total_ops = total.scalar()
 
         # Operations by type
         by_type_result = await session.execute(
-            select(
-                AuditLog.operation,
-                func.count(AuditLog.id)
-            )
+            select(AuditLog.operation, func.count(AuditLog.id))
             .where(AuditLog.timestamp >= cutoff)
             .group_by(AuditLog.operation)
         )
@@ -184,10 +161,7 @@ class AuditService:
 
         # Operations by table
         by_table_result = await session.execute(
-            select(
-                AuditLog.table_name,
-                func.count(AuditLog.id)
-            )
+            select(AuditLog.table_name, func.count(AuditLog.id))
             .where(AuditLog.timestamp >= cutoff)
             .group_by(AuditLog.table_name)
         )
@@ -195,20 +169,17 @@ class AuditService:
 
         # Suspicious count
         suspicious = await session.execute(
-            select(func.count(AuditLog.id))
-            .where(
-                and_(
-                    AuditLog.suspicious == True,
-                    AuditLog.timestamp >= cutoff
-                )
+            select(func.count(AuditLog.id)).where(
+                and_(AuditLog.suspicious == True, AuditLog.timestamp >= cutoff)
             )
         )
         suspicious_count = suspicious.scalar()
 
         # Unique users
         unique = await session.execute(
-            select(func.count(func.distinct(AuditLog.user_id)))
-            .where(AuditLog.timestamp >= cutoff)
+            select(func.count(func.distinct(AuditLog.user_id))).where(
+                AuditLog.timestamp >= cutoff
+            )
         )
         unique_users = unique.scalar()
 
@@ -218,7 +189,7 @@ class AuditService:
             "operations_by_table": by_table,
             "suspicious_count": suspicious_count,
             "unique_users": unique_users,
-            "time_range_hours": hours
+            "time_range_hours": hours,
         }
 
     @staticmethod
@@ -264,9 +235,7 @@ class AuditService:
 
     @staticmethod
     async def get_user_access_pattern(
-        session: AsyncSession,
-        user_id: UUID,
-        days: int = 7
+        session: AsyncSession, user_id: UUID, days: int = 7
     ) -> Dict[str, Any]:
         """
         Analyze user's access patterns for anomaly detection
@@ -284,12 +253,8 @@ class AuditService:
 
         # Total operations
         total = await session.execute(
-            select(func.count(AuditLog.id))
-            .where(
-                and_(
-                    AuditLog.user_id == user_id,
-                    AuditLog.timestamp >= cutoff
-                )
+            select(func.count(AuditLog.id)).where(
+                and_(AuditLog.user_id == user_id, AuditLog.timestamp >= cutoff)
             )
         )
         total_ops = total.scalar()
@@ -300,17 +265,12 @@ class AuditService:
         # Most active hour
         hour_result = await session.execute(
             select(
-                func.extract('hour', AuditLog.timestamp).label('hour'),
-                func.count(AuditLog.id).label('count')
+                func.extract("hour", AuditLog.timestamp).label("hour"),
+                func.count(AuditLog.id).label("count"),
             )
-            .where(
-                and_(
-                    AuditLog.user_id == user_id,
-                    AuditLog.timestamp >= cutoff
-                )
-            )
-            .group_by('hour')
-            .order_by(desc('count'))
+            .where(and_(AuditLog.user_id == user_id, AuditLog.timestamp >= cutoff))
+            .group_by("hour")
+            .order_by(desc("count"))
             .limit(1)
         )
         hour_row = hour_result.fetchone()
@@ -318,18 +278,10 @@ class AuditService:
 
         # Most accessed table
         table_result = await session.execute(
-            select(
-                AuditLog.table_name,
-                func.count(AuditLog.id).label('count')
-            )
-            .where(
-                and_(
-                    AuditLog.user_id == user_id,
-                    AuditLog.timestamp >= cutoff
-                )
-            )
+            select(AuditLog.table_name, func.count(AuditLog.id).label("count"))
+            .where(and_(AuditLog.user_id == user_id, AuditLog.timestamp >= cutoff))
             .group_by(AuditLog.table_name)
-            .order_by(desc('count'))
+            .order_by(desc("count"))
             .limit(1)
         )
         table_row = table_result.fetchone()
@@ -345,7 +297,7 @@ class AuditService:
             "most_active_hour": most_active_hour,
             "most_accessed_table": most_accessed_table,
             "unusual_activity": unusual,
-            "days_analyzed": days
+            "days_analyzed": days,
         }
 
     @staticmethod
@@ -357,7 +309,7 @@ class AuditService:
         suspicious_only: bool = False,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[AuditLog]:
         """
         Search audit logs with multiple filters
@@ -411,7 +363,7 @@ async def log_login(session: AsyncSession, user_id: UUID, ip_address: str):
         table_name="users",
         operation="LOGIN",
         ip_address=ip_address,
-        metadata={"event": "user_login"}
+        metadata={"event": "user_login"},
     )
 
 
@@ -422,7 +374,7 @@ async def log_logout(session: AsyncSession, user_id: UUID):
         user_id=user_id,
         table_name="users",
         operation="LOGOUT",
-        metadata={"event": "user_logout"}
+        metadata={"event": "user_logout"},
     )
 
 
@@ -434,13 +386,8 @@ async def log_failed_login(session: AsyncSession, email: str, ip_address: str):
         table_name="users",
         operation="FAILED_LOGIN",
         ip_address=ip_address,
-        metadata={"event": "failed_login", "email": email}
+        metadata={"event": "failed_login", "email": email},
     )
 
 
-__all__ = [
-    'AuditService',
-    'log_login',
-    'log_logout',
-    'log_failed_login'
-]
+__all__ = ["AuditService", "log_login", "log_logout", "log_failed_login"]

@@ -4,11 +4,12 @@ Audit Log Models
 Models for security audit logging and monitoring.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY, INET
-from sqlalchemy.sql import func
-from datetime import datetime, timedelta
 import uuid
+from datetime import datetime, timedelta
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB, UUID
+from sqlalchemy.sql import func
 
 from src.core.database import Base
 
@@ -19,6 +20,7 @@ class AuditLog(Base):
 
     Tracks all database operations for security monitoring.
     """
+
     __tablename__ = "audit_logs"
 
     # Primary fields
@@ -27,7 +29,9 @@ class AuditLog(Base):
 
     # Operation details
     table_name = Column(String(100), nullable=False, index=True)
-    operation = Column(String(20), nullable=False, index=True)  # SELECT, INSERT, UPDATE, DELETE
+    operation = Column(
+        String(20), nullable=False, index=True
+    )  # SELECT, INSERT, UPDATE, DELETE
     record_id = Column(UUID(as_uuid=True), nullable=True)
 
     # Data changes
@@ -72,7 +76,7 @@ class AuditLog(Base):
             "duration_ms": self.duration_ms,
             "suspicious": self.suspicious,
             "suspicious_reasons": self.suspicious_reasons,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
     @property
@@ -105,10 +109,7 @@ class AuditLog(Base):
             new_val = self.new_data.get(key)
 
             if old_val != new_val:
-                diff[key] = {
-                    "old": old_val,
-                    "new": new_val
-                }
+                diff[key] = {"old": old_val, "new": new_val}
 
         return diff
 

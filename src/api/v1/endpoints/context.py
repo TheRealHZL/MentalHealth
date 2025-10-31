@@ -5,19 +5,18 @@ API endpoints for managing user-specific AI context and preferences.
 All context data is encrypted client-side before storage.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
-from uuid import UUID
 import logging
+from typing import Any, Dict, List, Optional
+from uuid import UUID
 
-from src.core.rls_fastapi_middleware import get_rls_session, require_authentication
-from src.services.context_service import (
-    ContextService,
-    ConversationHistoryService,
-    AIPreferencesService
-)
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.core.rls_fastapi_middleware import (get_rls_session,
+                                             require_authentication)
+from src.services.context_service import (AIPreferencesService, ContextService,
+                                          ConversationHistoryService)
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +27,10 @@ router = APIRouter()
 # Schemas
 # ============================================================================
 
+
 class EncryptedPayload(BaseModel):
     """Encrypted data payload"""
+
     ciphertext: str = Field(description="Base64-encoded encrypted data")
     nonce: str = Field(description="Base64-encoded nonce")
     version: int = Field(default=1, description="Encryption version")
@@ -37,11 +38,13 @@ class EncryptedPayload(BaseModel):
 
 class ContextUpdateRequest(BaseModel):
     """Request to update user context"""
+
     encrypted_context: EncryptedPayload = Field(description="Encrypted context data")
 
 
 class ContextResponse(BaseModel):
     """User context response"""
+
     id: str
     user_id: str
     context_type: str
@@ -58,13 +61,17 @@ class ContextResponse(BaseModel):
 
 class ConversationMessageRequest(BaseModel):
     """Request to add message to conversation"""
+
     message_type: str = Field(description="'user' or 'assistant'")
     encrypted_message: EncryptedPayload = Field(description="Encrypted message content")
-    token_count: Optional[int] = Field(None, description="Token count for context window")
+    token_count: Optional[int] = Field(
+        None, description="Token count for context window"
+    )
 
 
 class ConversationMessageResponse(BaseModel):
     """Conversation message response"""
+
     id: str
     session_id: str
     sequence_number: int
@@ -76,6 +83,7 @@ class ConversationMessageResponse(BaseModel):
 
 class AIPreferencesResponse(BaseModel):
     """AI preferences response"""
+
     id: str
     user_id: str
     response_style: str
@@ -91,6 +99,7 @@ class AIPreferencesResponse(BaseModel):
 
 class AIPreferencesUpdateRequest(BaseModel):
     """Request to update AI preferences"""
+
     response_style: Optional[str] = None
     response_length: Optional[str] = None
     formality_level: Optional[str] = None
@@ -108,10 +117,11 @@ class AIPreferencesUpdateRequest(BaseModel):
 # User Context Endpoints
 # ============================================================================
 
+
 @router.get("/", response_model=ContextResponse)
 async def get_user_context(
     user_id: UUID = Depends(require_authentication),
-    session: AsyncSession = Depends(get_rls_session)
+    session: AsyncSession = Depends(get_rls_session),
 ):
     """
     Get User's AI Context
@@ -132,7 +142,7 @@ async def get_user_context(
         logger.error(f"Failed to get context for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve AI context"
+            detail="Failed to retrieve AI context",
         )
 
 
@@ -140,7 +150,7 @@ async def get_user_context(
 async def update_user_context(
     data: ContextUpdateRequest,
     user_id: UUID = Depends(require_authentication),
-    session: AsyncSession = Depends(get_rls_session)
+    session: AsyncSession = Depends(get_rls_session),
 ):
     """
     Update User's AI Context
@@ -153,13 +163,11 @@ async def update_user_context(
         encrypted_context = {
             "ciphertext": data.encrypted_context.ciphertext,
             "nonce": data.encrypted_context.nonce,
-            "version": data.encrypted_context.version
+            "version": data.encrypted_context.version,
         }
 
         context = await ContextService.update_context(
-            session,
-            user_id,
-            encrypted_context
+            session, user_id, encrypted_context
         )
 
         return ContextResponse(**context.to_dict(include_encrypted=True))
@@ -168,14 +176,14 @@ async def update_user_context(
         logger.error(f"Failed to update context for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update AI context"
+            detail="Failed to update AI context",
         )
 
 
 @router.delete("/")
 async def delete_user_context(
     user_id: UUID = Depends(require_authentication),
-    session: AsyncSession = Depends(get_rls_session)
+    session: AsyncSession = Depends(get_rls_session),
 ):
     """
     Delete User's AI Context
@@ -188,14 +196,10 @@ async def delete_user_context(
 
         if not deleted:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="AI context not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="AI context not found"
             )
 
-        return {
-            "success": True,
-            "message": "AI context deleted successfully"
-        }
+        return {"success": True, "message": "AI context deleted successfully"}
 
     except HTTPException:
         raise
@@ -203,7 +207,7 @@ async def delete_user_context(
         logger.error(f"Failed to delete context for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete AI context"
+            detail="Failed to delete AI context",
         )
 
 
@@ -211,12 +215,15 @@ async def delete_user_context(
 # Conversation History Endpoints
 # ============================================================================
 
-@router.get("/conversation/{session_id}", response_model=List[ConversationMessageResponse])
+
+@router.get(
+    "/conversation/{session_id}", response_model=List[ConversationMessageResponse]
+)
 async def get_conversation_history(
     session_id: UUID,
     user_id: UUID = Depends(require_authentication),
     session: AsyncSession = Depends(get_rls_session),
-    limit: int = 50
+    limit: int = 50,
 ):
     """
     Get Conversation History
@@ -226,10 +233,7 @@ async def get_conversation_history(
     """
     try:
         messages = await ConversationHistoryService.get_conversation(
-            session,
-            user_id,
-            session_id,
-            limit
+            session, user_id, session_id, limit
         )
 
         return [
@@ -241,7 +245,7 @@ async def get_conversation_history(
         logger.error(f"Failed to get conversation {session_id} for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve conversation history"
+            detail="Failed to retrieve conversation history",
         )
 
 
@@ -250,7 +254,7 @@ async def add_conversation_message(
     session_id: UUID,
     data: ConversationMessageRequest,
     user_id: UUID = Depends(require_authentication),
-    session: AsyncSession = Depends(get_rls_session)
+    session: AsyncSession = Depends(get_rls_session),
 ):
     """
     Add Message to Conversation
@@ -263,14 +267,14 @@ async def add_conversation_message(
         if data.message_type not in ["user", "assistant"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="message_type must be 'user' or 'assistant'"
+                detail="message_type must be 'user' or 'assistant'",
             )
 
         # Convert encrypted payload to dict
         encrypted_message = {
             "ciphertext": data.encrypted_message.ciphertext,
             "nonce": data.encrypted_message.nonce,
-            "version": data.encrypted_message.version
+            "version": data.encrypted_message.version,
         }
 
         message = await ConversationHistoryService.add_message(
@@ -279,7 +283,7 @@ async def add_conversation_message(
             session_id,
             data.message_type,
             encrypted_message,
-            token_count=data.token_count
+            token_count=data.token_count,
         )
 
         # Increment conversation count in context
@@ -293,7 +297,7 @@ async def add_conversation_message(
         logger.error(f"Failed to add message to conversation {session_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to add message to conversation"
+            detail="Failed to add message to conversation",
         )
 
 
@@ -301,7 +305,7 @@ async def add_conversation_message(
 async def delete_conversation(
     session_id: UUID,
     user_id: UUID = Depends(require_authentication),
-    session: AsyncSession = Depends(get_rls_session)
+    session: AsyncSession = Depends(get_rls_session),
 ):
     """
     Delete Conversation
@@ -311,22 +315,20 @@ async def delete_conversation(
     """
     try:
         count = await ConversationHistoryService.delete_conversation(
-            session,
-            user_id,
-            session_id
+            session, user_id, session_id
         )
 
         return {
             "success": True,
             "message": f"Deleted {count} messages from conversation",
-            "deleted_count": count
+            "deleted_count": count,
         }
 
     except Exception as e:
         logger.error(f"Failed to delete conversation {session_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete conversation"
+            detail="Failed to delete conversation",
         )
 
 
@@ -334,10 +336,11 @@ async def delete_conversation(
 # AI Preferences Endpoints
 # ============================================================================
 
+
 @router.get("/preferences", response_model=AIPreferencesResponse)
 async def get_ai_preferences(
     user_id: UUID = Depends(require_authentication),
-    session: AsyncSession = Depends(get_rls_session)
+    session: AsyncSession = Depends(get_rls_session),
 ):
     """
     Get AI Preferences
@@ -354,7 +357,7 @@ async def get_ai_preferences(
         logger.error(f"Failed to get AI preferences for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve AI preferences"
+            detail="Failed to retrieve AI preferences",
         )
 
 
@@ -362,7 +365,7 @@ async def get_ai_preferences(
 async def update_ai_preferences(
     data: AIPreferencesUpdateRequest,
     user_id: UUID = Depends(require_authentication),
-    session: AsyncSession = Depends(get_rls_session)
+    session: AsyncSession = Depends(get_rls_session),
 ):
     """
     Update AI Preferences
@@ -376,15 +379,10 @@ async def update_ai_preferences(
 
         if not updates:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No fields to update"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update"
             )
 
-        prefs = await AIPreferencesService.update_preferences(
-            session,
-            user_id,
-            updates
-        )
+        prefs = await AIPreferencesService.update_preferences(session, user_id, updates)
 
         return AIPreferencesResponse(**prefs.to_dict())
 
@@ -394,7 +392,7 @@ async def update_ai_preferences(
         logger.error(f"Failed to update AI preferences for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update AI preferences"
+            detail="Failed to update AI preferences",
         )
 
 
@@ -402,11 +400,12 @@ async def update_ai_preferences(
 # Utility Endpoints
 # ============================================================================
 
+
 @router.post("/cleanup")
 async def cleanup_old_conversations(
     user_id: UUID = Depends(require_authentication),
     session: AsyncSession = Depends(get_rls_session),
-    days: int = 90
+    days: int = 90,
 ):
     """
     Cleanup Old Conversations
@@ -418,20 +417,18 @@ async def cleanup_old_conversations(
         if days < 1 or days > 365:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Days must be between 1 and 365"
+                detail="Days must be between 1 and 365",
             )
 
         count = await ConversationHistoryService.cleanup_old_conversations(
-            session,
-            user_id,
-            days
+            session, user_id, days
         )
 
         return {
             "success": True,
             "message": f"Cleaned up {count} old messages",
             "deleted_count": count,
-            "retention_days": days
+            "retention_days": days,
         }
 
     except HTTPException:
@@ -440,14 +437,14 @@ async def cleanup_old_conversations(
         logger.error(f"Failed to cleanup conversations for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to cleanup old conversations"
+            detail="Failed to cleanup old conversations",
         )
 
 
 @router.get("/stats")
 async def get_context_stats(
     user_id: UUID = Depends(require_authentication),
-    session: AsyncSession = Depends(get_rls_session)
+    session: AsyncSession = Depends(get_rls_session),
 ):
     """
     Get Context Statistics
@@ -467,15 +464,19 @@ async def get_context_stats(
             "mood_entries_processed": context.mood_entries_processed,
             "dream_entries_processed": context.dream_entries_processed,
             "therapy_notes_processed": context.therapy_notes_processed,
-            "last_updated": context.last_updated.isoformat() if context.last_updated else None,
-            "last_accessed": context.last_accessed.isoformat() if context.last_accessed else None,
+            "last_updated": (
+                context.last_updated.isoformat() if context.last_updated else None
+            ),
+            "last_accessed": (
+                context.last_accessed.isoformat() if context.last_accessed else None
+            ),
             "days_since_update": context.days_since_update,
-            "is_active": context.is_active
+            "is_active": context.is_active,
         }
 
     except Exception as e:
         logger.error(f"Failed to get context stats for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve context statistics"
+            detail="Failed to retrieve context statistics",
         )

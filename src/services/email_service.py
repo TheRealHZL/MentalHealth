@@ -6,9 +6,11 @@ Sendet Willkommens-Emails und Benachrichtigungen.
 
 import logging
 from typing import Optional
+
 from src.core.config import get_settings
 
 logger = logging.getLogger(__name__)
+
 
 class EmailService:
     """Email Service für User-Kommunikation"""
@@ -17,27 +19,23 @@ class EmailService:
         self.settings = get_settings()
         self.sender_email = "noreply@mindbridge.com"
         self.sender_name = "MindBridge Team"
-        self.enabled = getattr(self.settings, 'EMAIL_ENABLED', False)
+        self.enabled = getattr(self.settings, "EMAIL_ENABLED", False)
 
         if not self.enabled:
             logger.warning("📧 Email service is DISABLED. Emails will be logged only.")
         else:
             logger.info("📧 Email service is ENABLED")
-    
+
     async def send_welcome_email(
-        self, 
-        to_email: str, 
-        first_name: str, 
-        has_therapist: bool = False
+        self, to_email: str, first_name: str, has_therapist: bool = False
     ) -> bool:
         """Send welcome email (alias for send_patient_welcome_email)"""
-        return await self.send_patient_welcome_email(to_email, first_name, has_therapist)
-    
+        return await self.send_patient_welcome_email(
+            to_email, first_name, has_therapist
+        )
+
     async def send_patient_welcome_email(
-        self,
-        email: str,
-        first_name: str,
-        has_therapist: bool = False
+        self, email: str, first_name: str, has_therapist: bool = False
     ) -> bool:
         """Send welcome email to patients"""
         try:
@@ -53,12 +51,9 @@ class EmailService:
         except Exception as e:
             logger.error(f"Failed to send welcome email: {e}")
             return False
-    
+
     async def send_therapist_welcome_email(
-        self,
-        email: str,
-        first_name: str,
-        license_number: str
+        self, email: str, first_name: str, license_number: str
     ) -> bool:
         """Send welcome email to therapists"""
         try:
@@ -111,7 +106,7 @@ class EmailService:
         except Exception as e:
             logger.error(f"📧 Failed to send email to {to_email}: {e}")
             return False
-    
+
     def _get_self_help_patient_template(self, first_name: str) -> str:
         """Email template for self-help patients"""
         return f"""
@@ -132,7 +127,7 @@ class EmailService:
         Viel Erfolg,
         Dein MindBridge Team
         """
-    
+
     def _get_patient_with_therapist_template(self, first_name: str) -> str:
         """Email template for patients with therapist"""
         return f"""
@@ -147,7 +142,7 @@ class EmailService:
         Viel Erfolg,
         Dein MindBridge Team
         """
-    
+
     def _get_therapist_template(self, first_name: str, license_number: str) -> str:
         """Email template for therapists"""
         return f"""

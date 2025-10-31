@@ -5,15 +5,16 @@ Wrapper around AIIntegrationService that adds complete user isolation.
 Ensures User A's data is NEVER accessible by User B during AI processing.
 """
 
-from typing import Dict, Any, List, Optional
 import logging
 import uuid
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import MoodEntry, DreamEntry, TherapyNote
 from src.ai.user_isolated_engine import UserIsolatedAIEngine
 from src.core.rls_middleware import set_user_context
+from src.models import DreamEntry, MoodEntry, TherapyNote
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +49,7 @@ class UserIsolatedAIIntegrationService:
     # =========================================================================
 
     async def analyze_mood_entry(
-        self,
-        session: AsyncSession,
-        user_id: uuid.UUID,
-        mood_entry: MoodEntry
+        self, session: AsyncSession, user_id: uuid.UUID, mood_entry: MoodEntry
     ) -> Dict[str, Any]:
         """
         Analyze mood entry with complete user isolation
@@ -90,8 +88,8 @@ class UserIsolatedAIIntegrationService:
                     "sleep_quality": mood_entry.sleep_quality,
                     "sleep_hours": mood_entry.sleep_hours,
                     "exercise_minutes": mood_entry.exercise_minutes,
-                    "energy_level": mood_entry.energy_level
-                }
+                    "energy_level": mood_entry.energy_level,
+                },
             )
 
             # Get emotion analysis using base engine
@@ -101,13 +99,15 @@ class UserIsolatedAIIntegrationService:
                 context={
                     "user_id": str(user_id),
                     "mood_score": mood_entry.mood_score,
-                    "stress_level": mood_entry.stress_level
-                }
+                    "stress_level": mood_entry.stress_level,
+                },
             )
 
             # Sentiment analysis
-            sentiment_result = await self.isolated_ai_engine.base_engine.analyze_sentiment(
-                text=analysis_text
+            sentiment_result = (
+                await self.isolated_ai_engine.base_engine.analyze_sentiment(
+                    text=analysis_text
+                )
             )
 
             return {
@@ -117,12 +117,13 @@ class UserIsolatedAIIntegrationService:
                 "emotion_analysis": emotion_result,
                 "sentiment_analysis": sentiment_result,
                 "confidence_score": (
-                    mood_analysis.get("confidence", 0) +
-                    emotion_result.get("confidence", 0) +
-                    sentiment_result.get("confidence", 0)
-                ) / 3,
+                    mood_analysis.get("confidence", 0)
+                    + emotion_result.get("confidence", 0)
+                    + sentiment_result.get("confidence", 0)
+                )
+                / 3,
                 "analysis_timestamp": datetime.utcnow().isoformat(),
-                "isolation_verified": True
+                "isolation_verified": True,
             }
 
         except PermissionError as e:
@@ -134,7 +135,7 @@ class UserIsolatedAIIntegrationService:
                 "ai_generated": False,
                 "user_id": str(user_id),
                 "error": "AI analysis temporarily unavailable",
-                "details": str(e)
+                "details": str(e),
             }
 
     # =========================================================================
@@ -142,10 +143,7 @@ class UserIsolatedAIIntegrationService:
     # =========================================================================
 
     async def analyze_dream_entry(
-        self,
-        session: AsyncSession,
-        user_id: uuid.UUID,
-        dream_entry: DreamEntry
+        self, session: AsyncSession, user_id: uuid.UUID, dream_entry: DreamEntry
     ) -> Dict[str, Any]:
         """
         Analyze dream entry with complete user isolation
@@ -179,16 +177,20 @@ class UserIsolatedAIIntegrationService:
                 user_id=user_id,
                 dream_text=dream_text,
                 dream_metadata={
-                    "dream_type": dream_entry.dream_type.value if dream_entry.dream_type else None,
+                    "dream_type": (
+                        dream_entry.dream_type.value if dream_entry.dream_type else None
+                    ),
                     "mood_after_waking": dream_entry.mood_after_waking,
                     "is_recurring": dream_entry.is_recurring,
-                    "vividness": dream_entry.vividness
-                }
+                    "vividness": dream_entry.vividness,
+                },
             )
 
             # Get sentiment analysis
-            sentiment_result = await self.isolated_ai_engine.base_engine.analyze_sentiment(
-                text=dream_text
+            sentiment_result = (
+                await self.isolated_ai_engine.base_engine.analyze_sentiment(
+                    text=dream_text
+                )
             )
 
             # Symbol analysis (if symbols present)
@@ -196,13 +198,18 @@ class UserIsolatedAIIntegrationService:
             if dream_entry.symbols:
                 for symbol in dream_entry.symbols[:3]:  # Limit to 3 symbols
                     symbol_text = f"Dream symbol: {symbol}"
-                    symbol_emotion = await self.isolated_ai_engine.base_engine.predict_emotion(
-                        text=symbol_text,
-                        context={"type": "symbol_analysis", "user_id": str(user_id)}
+                    symbol_emotion = (
+                        await self.isolated_ai_engine.base_engine.predict_emotion(
+                            text=symbol_text,
+                            context={
+                                "type": "symbol_analysis",
+                                "user_id": str(user_id),
+                            },
+                        )
                     )
                     symbol_analysis[symbol] = {
                         "emotion": symbol_emotion.get("emotion"),
-                        "confidence": symbol_emotion.get("confidence")
+                        "confidence": symbol_emotion.get("confidence"),
                     }
 
             return {
@@ -212,7 +219,7 @@ class UserIsolatedAIIntegrationService:
                 "sentiment_analysis": sentiment_result,
                 "symbol_analysis": symbol_analysis,
                 "analysis_timestamp": datetime.utcnow().isoformat(),
-                "isolation_verified": True
+                "isolation_verified": True,
             }
 
         except PermissionError as e:
@@ -224,7 +231,7 @@ class UserIsolatedAIIntegrationService:
                 "ai_generated": False,
                 "user_id": str(user_id),
                 "error": "AI dream analysis temporarily unavailable",
-                "details": str(e)
+                "details": str(e),
             }
 
     # =========================================================================
@@ -232,10 +239,7 @@ class UserIsolatedAIIntegrationService:
     # =========================================================================
 
     async def analyze_therapy_note(
-        self,
-        session: AsyncSession,
-        user_id: uuid.UUID,
-        therapy_note: TherapyNote
+        self, session: AsyncSession, user_id: uuid.UUID, therapy_note: TherapyNote
     ) -> Dict[str, Any]:
         """
         Analyze therapy note with complete user isolation
@@ -269,11 +273,13 @@ class UserIsolatedAIIntegrationService:
                 user_id=user_id,
                 note_text=note_text,
                 note_metadata={
-                    "note_type": therapy_note.note_type.value if therapy_note.note_type else None,
+                    "note_type": (
+                        therapy_note.note_type.value if therapy_note.note_type else None
+                    ),
                     "goals_discussed": therapy_note.goals_discussed,
                     "techniques_used": therapy_note.techniques_used,
-                    "progress_made": therapy_note.progress_made
-                }
+                    "progress_made": therapy_note.progress_made,
+                },
             )
 
             return {
@@ -281,7 +287,7 @@ class UserIsolatedAIIntegrationService:
                 "user_id": str(user_id),
                 "therapy_note_analysis": note_analysis,
                 "analysis_timestamp": datetime.utcnow().isoformat(),
-                "isolation_verified": True
+                "isolation_verified": True,
             }
 
         except PermissionError as e:
@@ -293,7 +299,7 @@ class UserIsolatedAIIntegrationService:
                 "ai_generated": False,
                 "user_id": str(user_id),
                 "error": "AI therapy analysis temporarily unavailable",
-                "details": str(e)
+                "details": str(e),
             }
 
     # =========================================================================
@@ -305,7 +311,7 @@ class UserIsolatedAIIntegrationService:
         session: AsyncSession,
         user_id: uuid.UUID,
         user_message: str,
-        session_id: uuid.UUID
+        session_id: uuid.UUID,
     ) -> Dict[str, Any]:
         """
         Generate chat response with complete user isolation
@@ -328,7 +334,7 @@ class UserIsolatedAIIntegrationService:
                 session=session,
                 user_id=user_id,
                 user_message=user_message,
-                session_id=session_id
+                session_id=session_id,
             )
 
             return {
@@ -339,7 +345,7 @@ class UserIsolatedAIIntegrationService:
                 "safety_checked": response.get("safety_checked", True),
                 "session_id": str(session_id),
                 "timestamp": datetime.utcnow().isoformat(),
-                "isolation_verified": True
+                "isolation_verified": True,
             }
 
         except Exception as e:
@@ -348,7 +354,7 @@ class UserIsolatedAIIntegrationService:
                 "ai_generated": False,
                 "user_id": str(user_id),
                 "response": "Entschuldigung, ich hatte ein technisches Problem. Bitte versuche es nochmal.",
-                "error": str(e)
+                "error": str(e),
             }
 
     # =========================================================================
@@ -374,7 +380,9 @@ class UserIsolatedAIIntegrationService:
 
         parts.append(f"Stress: {mood_entry.stress_level}/10")
         parts.append(f"Energie: {mood_entry.energy_level}/10")
-        parts.append(f"Schlaf: {mood_entry.sleep_hours}h, Qualität: {mood_entry.sleep_quality}/10")
+        parts.append(
+            f"Schlaf: {mood_entry.sleep_hours}h, Qualität: {mood_entry.sleep_quality}/10"
+        )
 
         return " | ".join(parts)
 

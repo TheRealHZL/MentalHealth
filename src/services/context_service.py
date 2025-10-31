@@ -4,14 +4,16 @@ User Context Service
 Service for managing user-specific AI context.
 """
 
-from typing import Optional, Dict, Any, List
-from datetime import datetime, timedelta
-from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc
 import logging
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+from uuid import UUID
 
-from src.models.user_context import UserContext, AIConversationHistory, UserAIPreferences
+from sqlalchemy import and_, desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.models.user_context import (AIConversationHistory, UserAIPreferences,
+                                     UserContext)
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +23,7 @@ class ContextService:
 
     @staticmethod
     async def get_or_create_context(
-        session: AsyncSession,
-        user_id: UUID
+        session: AsyncSession, user_id: UUID
     ) -> UserContext:
         """
         Get user context or create if doesn't exist
@@ -44,10 +45,7 @@ class ContextService:
 
         # Create new context
         context = UserContext(
-            user_id=user_id,
-            context_type="general",
-            context_version=1,
-            is_active=True
+            user_id=user_id, context_type="general", context_version=1, is_active=True
         )
 
         session.add(context)
@@ -60,9 +58,7 @@ class ContextService:
 
     @staticmethod
     async def update_context(
-        session: AsyncSession,
-        user_id: UUID,
-        encrypted_context: Dict[str, Any]
+        session: AsyncSession, user_id: UUID, encrypted_context: Dict[str, Any]
     ) -> UserContext:
         """
         Update user's encrypted context
@@ -81,19 +77,21 @@ class ContextService:
 
         # Update size
         import json
+
         context.context_size_bytes = len(json.dumps(encrypted_context))
 
         await session.commit()
         await session.refresh(context)
 
-        logger.info(f"✅ Updated AI context for user {user_id} ({context.context_size_bytes} bytes)")
+        logger.info(
+            f"✅ Updated AI context for user {user_id} ({context.context_size_bytes} bytes)"
+        )
 
         return context
 
     @staticmethod
     async def get_context(
-        session: AsyncSession,
-        user_id: UUID
+        session: AsyncSession, user_id: UUID
     ) -> Optional[UserContext]:
         """
         Get user's context
@@ -105,10 +103,7 @@ class ContextService:
         """
         result = await session.execute(
             select(UserContext).where(
-                and_(
-                    UserContext.user_id == user_id,
-                    UserContext.is_active == True
-                )
+                and_(UserContext.user_id == user_id, UserContext.is_active == True)
             )
         )
         context = result.scalar_one_or_none()
@@ -120,10 +115,7 @@ class ContextService:
         return context
 
     @staticmethod
-    async def delete_context(
-        session: AsyncSession,
-        user_id: UUID
-    ) -> bool:
+    async def delete_context(session: AsyncSession, user_id: UUID) -> bool:
         """
         Delete user's context (for privacy/GDPR)
 
@@ -147,9 +139,7 @@ class ContextService:
 
     @staticmethod
     async def increment_processed_count(
-        session: AsyncSession,
-        user_id: UUID,
-        entry_type: str
+        session: AsyncSession, user_id: UUID, entry_type: str
     ):
         """
         Increment processed entry count
@@ -186,7 +176,7 @@ class ConversationHistoryService:
         encrypted_message: Dict[str, Any],
         sequence_number: Optional[int] = None,
         token_count: Optional[int] = None,
-        model_version: Optional[str] = None
+        model_version: Optional[str] = None,
     ) -> AIConversationHistory:
         """
         Add message to conversation history
@@ -207,7 +197,7 @@ class ConversationHistoryService:
                 .where(
                     and_(
                         AIConversationHistory.user_id == user_id,
-                        AIConversationHistory.session_id == session_id
+                        AIConversationHistory.session_id == session_id,
                     )
                 )
                 .order_by(desc(AIConversationHistory.sequence_number))
@@ -224,7 +214,7 @@ class ConversationHistoryService:
             message_type=message_type,
             encrypted_message=encrypted_message,
             token_count=token_count,
-            model_version=model_version
+            model_version=model_version,
         )
 
         session.add(message)
@@ -237,10 +227,7 @@ class ConversationHistoryService:
 
     @staticmethod
     async def get_conversation(
-        session: AsyncSession,
-        user_id: UUID,
-        session_id: UUID,
-        limit: int = 50
+        session: AsyncSession, user_id: UUID, session_id: UUID, limit: int = 50
     ) -> List[AIConversationHistory]:
         """
         Get conversation history for a session
@@ -256,7 +243,7 @@ class ConversationHistoryService:
                 and_(
                     AIConversationHistory.user_id == user_id,
                     AIConversationHistory.session_id == session_id,
-                    AIConversationHistory.is_deleted == False
+                    AIConversationHistory.is_deleted == False,
                 )
             )
             .order_by(AIConversationHistory.sequence_number)
@@ -267,9 +254,7 @@ class ConversationHistoryService:
 
     @staticmethod
     async def delete_conversation(
-        session: AsyncSession,
-        user_id: UUID,
-        session_id: UUID
+        session: AsyncSession, user_id: UUID, session_id: UUID
     ) -> int:
         """
         Soft delete a conversation
@@ -283,12 +268,11 @@ class ConversationHistoryService:
             )
         """
         result = await session.execute(
-            select(AIConversationHistory)
-            .where(
+            select(AIConversationHistory).where(
                 and_(
                     AIConversationHistory.user_id == user_id,
                     AIConversationHistory.session_id == session_id,
-                    AIConversationHistory.is_deleted == False
+                    AIConversationHistory.is_deleted == False,
                 )
             )
         )
@@ -308,9 +292,7 @@ class ConversationHistoryService:
 
     @staticmethod
     async def cleanup_old_conversations(
-        session: AsyncSession,
-        user_id: UUID,
-        days: int = 90
+        session: AsyncSession, user_id: UUID, days: int = 90
     ) -> int:
         """
         Delete conversations older than specified days
@@ -323,12 +305,11 @@ class ConversationHistoryService:
         cutoff = datetime.utcnow() - timedelta(days=days)
 
         result = await session.execute(
-            select(AIConversationHistory)
-            .where(
+            select(AIConversationHistory).where(
                 and_(
                     AIConversationHistory.user_id == user_id,
                     AIConversationHistory.timestamp < cutoff,
-                    AIConversationHistory.is_deleted == False
+                    AIConversationHistory.is_deleted == False,
                 )
             )
         )
@@ -352,8 +333,7 @@ class AIPreferencesService:
 
     @staticmethod
     async def get_or_create_preferences(
-        session: AsyncSession,
-        user_id: UUID
+        session: AsyncSession, user_id: UUID
     ) -> UserAIPreferences:
         """
         Get user AI preferences or create with defaults
@@ -376,7 +356,7 @@ class AIPreferencesService:
             response_style="empathetic",
             response_length="medium",
             formality_level="friendly",
-            language="de"
+            language="de",
         )
 
         session.add(prefs)
@@ -389,9 +369,7 @@ class AIPreferencesService:
 
     @staticmethod
     async def update_preferences(
-        session: AsyncSession,
-        user_id: UUID,
-        updates: Dict[str, Any]
+        session: AsyncSession, user_id: UUID, updates: Dict[str, Any]
     ) -> UserAIPreferences:
         """
         Update user AI preferences
@@ -420,8 +398,4 @@ class AIPreferencesService:
         return prefs
 
 
-__all__ = [
-    'ContextService',
-    'ConversationHistoryService',
-    'AIPreferencesService'
-]
+__all__ = ["ContextService", "ConversationHistoryService", "AIPreferencesService"]

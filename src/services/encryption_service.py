@@ -13,17 +13,18 @@ This service provides:
 The server NEVER sees plaintext user data!
 """
 
+import base64
+import hashlib
 import os
 import secrets
-import hashlib
-import base64
-from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from typing import Any, Dict, Optional, Tuple
 
-from src.models.encrypted_models import UserEncryptionKey
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.core.logging import get_logger
+from src.models.encrypted_models import UserEncryptionKey
 
 logger = get_logger(__name__)
 
@@ -44,7 +45,6 @@ class EncryptionService:
     SUPPORTED_VERSIONS = [1]
     CURRENT_VERSION = 1
 
-
     @staticmethod
     def generate_salt() -> bytes:
         """
@@ -55,9 +55,10 @@ class EncryptionService:
         """
         return secrets.token_bytes(EncryptionService.SALT_LENGTH)
 
-
     @staticmethod
-    def validate_encrypted_payload(payload: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    def validate_encrypted_payload(
+        payload: Dict[str, Any],
+    ) -> Tuple[bool, Optional[str]]:
         """
         Validate that an encrypted payload has the correct structure.
 
@@ -114,13 +115,12 @@ class EncryptionService:
 
         return True, None
 
-
     @staticmethod
     async def setup_user_encryption(
         db: AsyncSession,
         user_id: str,
         salt: Optional[bytes] = None,
-        iterations: Optional[int] = None
+        iterations: Optional[int] = None,
     ) -> UserEncryptionKey:
         """
         Set up encryption parameters for a new user.
@@ -162,7 +162,7 @@ class EncryptionService:
             key_iterations=iterations,
             key_algorithm="PBKDF2-SHA256",
             current_key_version=EncryptionService.CURRENT_VERSION,
-            has_recovery_key=False
+            has_recovery_key=False,
         )
 
         db.add(encryption_key)
@@ -173,11 +173,9 @@ class EncryptionService:
 
         return encryption_key
 
-
     @staticmethod
     async def get_user_encryption_params(
-        db: AsyncSession,
-        user_id: str
+        db: AsyncSession, user_id: str
     ) -> Optional[Dict[str, Any]]:
         """
         Get encryption parameters for a user.
@@ -200,13 +198,12 @@ class EncryptionService:
             return None
 
         return {
-            "salt": base64.b64encode(encryption_key.key_salt).decode('utf-8'),
+            "salt": base64.b64encode(encryption_key.key_salt).decode("utf-8"),
             "iterations": encryption_key.key_iterations,
             "algorithm": encryption_key.key_algorithm,
             "version": encryption_key.current_key_version,
-            "has_recovery_key": encryption_key.has_recovery_key
+            "has_recovery_key": encryption_key.has_recovery_key,
         }
-
 
     @staticmethod
     def validate_password_strength(password: str) -> Tuple[bool, Optional[str]]:
@@ -226,7 +223,10 @@ class EncryptionService:
             Tuple of (is_valid, error_message)
         """
         if len(password) < EncryptionService.MIN_PASSWORD_LENGTH:
-            return False, f"Password must be at least {EncryptionService.MIN_PASSWORD_LENGTH} characters"
+            return (
+                False,
+                f"Password must be at least {EncryptionService.MIN_PASSWORD_LENGTH} characters",
+            )
 
         # Check for uppercase
         if not any(c.isupper() for c in password):
@@ -247,7 +247,6 @@ class EncryptionService:
 
         return True, None
 
-
     @staticmethod
     def estimate_key_derivation_time(iterations: int) -> float:
         """
@@ -266,12 +265,8 @@ class EncryptionService:
         # This is conservative; could be faster on newer devices
         return (iterations / 600000) * 0.5
 
-
     @staticmethod
-    async def rotate_user_key(
-        db: AsyncSession,
-        user_id: str
-    ) -> UserEncryptionKey:
+    async def rotate_user_key(db: AsyncSession, user_id: str) -> UserEncryptionKey:
         """
         Rotate user's encryption key (for future use).
 
@@ -304,10 +299,11 @@ class EncryptionService:
         await db.commit()
         await db.refresh(encryption_key)
 
-        logger.info(f"Rotated encryption key for user {user_id} to version {encryption_key.current_key_version}")
+        logger.info(
+            f"Rotated encryption key for user {user_id} to version {encryption_key.current_key_version}"
+        )
 
         return encryption_key
-
 
     @staticmethod
     def generate_recovery_key() -> str:
@@ -321,11 +317,12 @@ class EncryptionService:
             Base64-encoded recovery key
         """
         recovery_key_bytes = secrets.token_bytes(32)  # 256 bits
-        return base64.b64encode(recovery_key_bytes).decode('utf-8')
-
+        return base64.b64encode(recovery_key_bytes).decode("utf-8")
 
     @staticmethod
-    def validate_encrypted_data_size(encrypted_data: bytes, max_size_mb: int = 10) -> Tuple[bool, Optional[str]]:
+    def validate_encrypted_data_size(
+        encrypted_data: bytes, max_size_mb: int = 10
+    ) -> Tuple[bool, Optional[str]]:
         """
         Validate that encrypted data is not too large.
 

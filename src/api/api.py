@@ -4,12 +4,13 @@ Main API Router
 Zentrale Routing-Konfiguration mit Versioning und Middleware.
 """
 
+import logging
+import time
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-import time
-import logging
 
 from src.api.v1.api import api_router as v1_router
 from src.core.config import get_settings
@@ -27,9 +28,10 @@ api_router.include_router(
     prefix="/v1",
     responses={
         500: {"description": "Internal server error"},
-        503: {"description": "Service unavailable"}
-    }
+        503: {"description": "Service unavailable"},
+    },
 )
+
 
 # Root endpoint
 @api_router.get("/", tags=["root"])
@@ -40,23 +42,20 @@ async def root():
         "description": "Privacy-first mental health platform with AI-powered insights",
         "version": "1.0.0",
         "api_versions": {
-            "v1": {
-                "status": "stable",
-                "base_url": "/api/v1",
-                "documentation": "/docs"
-            }
+            "v1": {"status": "stable", "base_url": "/api/v1", "documentation": "/docs"}
         },
         "features": [
             "🧠 AI-powered mood analysis",
             "📊 Advanced analytics",
             "🔒 End-to-end encryption",
             "🎯 Personalized insights",
-            "🌍 Multi-language support"
+            "🌍 Multi-language support",
         ],
         "health_check": "/health",
         "status": "operational",
-        "timestamp": time.time()
+        "timestamp": time.time(),
     }
+
 
 # Health check endpoint
 @api_router.get("/health", tags=["monitoring"])
@@ -74,14 +73,16 @@ async def health_check(request: Request):
         "services": {
             "api": "operational",
             "database": "unknown",
-            "ai_service": "unknown"
-        }
+            "ai_service": "unknown",
+        },
     }
 
     # Check database connection
     try:
-        from src.core.database import async_engine
         from sqlalchemy import text
+
+        from src.core.database import async_engine
+
         # Try to execute a simple query to check database connectivity
         async with async_engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
@@ -109,12 +110,13 @@ async def health_check(request: Request):
 
     return health_status
 
+
 # Metrics endpoint
 @api_router.get("/metrics", tags=["monitoring"])
 async def metrics():
     """
     API Metrics
-    
+
     Gibt grundlegende Metriken über die API zurück.
     """
     return {
@@ -122,27 +124,24 @@ async def metrics():
         "requests": {
             "total": 0,  # TODO: Implement actual metrics
             "success": 0,
-            "errors": 0
+            "errors": 0,
         },
         "performance": {
             "average_response_time": 0.0,
             "p95_response_time": 0.0,
-            "p99_response_time": 0.0
+            "p99_response_time": 0.0,
         },
-        "resources": {
-            "cpu_usage": 0.0,
-            "memory_usage": 0.0,
-            "active_connections": 0
-        },
-        "timestamp": time.time()
+        "resources": {"cpu_usage": 0.0, "memory_usage": 0.0, "active_connections": 0},
+        "timestamp": time.time(),
     }
+
 
 # Status endpoint
 @api_router.get("/status", tags=["monitoring"])
 async def status():
     """
     System Status
-    
+
     Detaillierte Systeminformationen für Monitoring.
     """
     return {
@@ -155,15 +154,12 @@ async def status():
             "database": "operational",
             "ai_engine": "operational",
             "storage": "operational",
-            "cache": "operational"
+            "cache": "operational",
         },
-        "maintenance": {
-            "scheduled": False,
-            "next_window": None,
-            "message": None
-        },
-        "timestamp": time.time()
+        "maintenance": {"scheduled": False, "next_window": None, "message": None},
+        "timestamp": time.time(),
     }
+
 
 # API versioning info
 @api_router.get("/versions", tags=["versioning"])
@@ -181,8 +177,8 @@ async def api_versions():
                     "Initial release with core features",
                     "Mood tracking and analysis",
                     "AI-powered insights",
-                    "User authentication"
-                ]
+                    "User authentication",
+                ],
             }
         },
         "latest_updates": [
@@ -192,20 +188,21 @@ async def api_versions():
                 "changes": [
                     "Core API endpoints",
                     "Authentication system",
-                    "Basic mood tracking"
-                ]
+                    "Basic mood tracking",
+                ],
             }
         ],
         "deprecation_policy": {
             "notice_period": "6 months",
             "support_period": "12 months after deprecation",
-            "migration_guide": "/docs/migration"
-        }
+            "migration_guide": "/docs/migration",
+        },
     }
+
 
 # Development endpoints (only in dev/staging)
 if settings.ENVIRONMENT in ["development", "staging"]:
-    
+
     @api_router.get("/dev/info", tags=["development"])
     async def dev_info():
         """Development Information (dev only)"""
@@ -217,22 +214,24 @@ if settings.ENVIRONMENT in ["development", "staging"]:
             "security": {
                 "jwt_configured": bool(settings.SECRET_KEY),
                 "cors_enabled": True,
-                "https_only": settings.ENVIRONMENT == "production"
-            }
+                "https_only": settings.ENVIRONMENT == "production",
+            },
         }
-    
+
     @api_router.get("/dev/test-error", tags=["development"])
     async def test_error():
         """Test error handling (dev only)"""
         raise HTTPException(status_code=500, detail="Test error for development")
-    
+
     @api_router.get("/dev/config", tags=["development"])
     async def dev_config():
         """Development configuration (dev only)"""
         return {
             "environment": settings.ENVIRONMENT,
             "debug": settings.DEBUG,
-            "database_url": settings.DATABASE_URL[:20] + "..." if settings.DATABASE_URL else None,
+            "database_url": (
+                settings.DATABASE_URL[:20] + "..." if settings.DATABASE_URL else None
+            ),
             "ai_enabled": True,
-            "cors_enabled": True
+            "cors_enabled": True,
         }
