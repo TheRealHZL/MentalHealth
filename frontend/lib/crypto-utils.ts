@@ -302,7 +302,7 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
 /**
  * Convert string to ArrayBuffer
  */
-export function stringToArrayBuffer(str: string): ArrayBuffer {
+export function stringToArrayBuffer(str: string): Uint8Array {
   const encoder = new TextEncoder();
   return encoder.encode(str);
 }
