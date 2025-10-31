@@ -5,19 +5,21 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: mindbridge-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: mindbridge
-      POSTGRES_PASSWORD: mindbridge_secure_password
-      POSTGRES_DB: mindbridge
+      POSTGRES_USER: mindbridge_user
+      POSTGRES_PASSWORD: mindbridge_secure_password_change_me
+      POSTGRES_DB: mindbridge_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mindbridge"]
+      test: ["CMD-SHELL", "pg_isready -U mindbridge_user -d mindbridge_db"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - mindbridge-network
 
@@ -25,6 +27,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: mindbridge-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
@@ -37,32 +41,84 @@ services:
     networks:
       - mindbridge-network
 
-  # MindBridge API
-  api:
-    build: .
-    container_name: mindbridge-api
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mindbridge-backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      # Database
-      DATABASE_URL: postgresql+asyncpg://mindbridge:mindbridge_secure_password@postgres:5432/mindbridge
-      
-      # Redis
-      REDIS_URL: redis://redis:6379
-      
-      # Security
-      SECRET_KEY: your-super-secret-key-change-in-production-please
-      ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
-      
-      # Environment
+      # Application
       ENVIRONMENT: development
-      
+      DEBUG: "true"
+
+      # Database
+      DATABASE_URL: postgresql+asyncpg://mindbridge_user:mindbridge_secure_password_change_me@postgres:5432/mindbridge_db
+      DATABASE_ECHO: "false"
+
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+
+      # Security
+      SECRET_KEY: your-super-secret-key-change-in-production-minimum-32-chars
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_HOURS: 24
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+
       # CORS
-      ALLOWED_HOSTS: localhost,127.0.0.1
+      ALLOWED_HOSTS: "*"
+      CORS_ORIGINS: "*"
+      HTTPS_ONLY: "false"
+
+      # AI Configuration
+      AI_ENGINE_ENABLED: "true"
+      AI_DEVICE: cpu
+      AI_TEMPERATURE: "0.7"
+      AI_TOP_P: "0.9"
+      AI_TOP_K: "50"
+      AI_MAX_LENGTH: "512"
+      MAX_RESPONSE_LENGTH: "300"
+
+      # Model Paths
+      TOKENIZER_PATH: /app/data/models/tokenizer.pkl
+      EMOTION_MODEL_PATH: /app/data/models/emotion_classifier.pt
+      MOOD_MODEL_PATH: /app/data/models/mood_predictor.pt
+      CHAT_MODEL_PATH: /app/data/models/chat_generator.pt
+
+      # Model Architecture
+      VOCAB_SIZE: "10000"
+      EMBEDDING_DIM: "128"
+      HIDDEN_DIM: "256"
+      NUM_LAYERS: "2"
+      NUM_HEADS: "8"
+      FF_DIM: "512"
+      DROPOUT_RATE: "0.1"
+
+      # Rate Limiting
+      RATE_LIMIT_ENABLED: "true"
+      DEFAULT_RATE_LIMIT: "100"
+      AUTH_RATE_LIMIT: "5"
+
+      # Logging
+      LOG_LEVEL: INFO
+      ANALYTICS_ENABLED: "true"
+
+      # Feature Flags
+      THERAPIST_VERIFICATION_REQUIRED: "true"
+      EMAIL_VERIFICATION_REQUIRED: "false"
+      SHARING_ENABLED: "true"
+
+      # Business Logic
+      MAX_MOOD_ENTRIES_PER_DAY: "10"
+      MAX_DREAM_ENTRIES_PER_DAY: "5"
+      MAX_THERAPY_NOTES_PER_DAY: "20"
+      DEFAULT_SHARE_KEY_EXPIRY_DAYS: "90"
+
     volumes:
       - ./data:/app/data
-      - ./checkpoints:/app/checkpoints
       - ./logs:/app/logs
     depends_on:
       postgres:
@@ -74,19 +130,49 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
     networks:
       - mindbridge-network
 
-  # pgAdmin (Optional - für Database Management)
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mindbridge-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_VERSION: v1
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - mindbridge-network
+
+  # pgAdmin (Optional - Database Management UI)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: mindbridge-pgadmin
+    restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@mindbridge.local
       PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     depends_on:
       - postgres
     networks:
@@ -98,6 +184,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  pgadmin_data:
     driver: local
 
 networks:

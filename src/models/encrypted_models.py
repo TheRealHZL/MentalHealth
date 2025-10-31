@@ -15,7 +15,7 @@ from sqlalchemy import (Boolean, Column, DateTime, Integer, LargeBinary,
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
-from src.models.base import Base
+from src.core.database import Base
 
 
 class EncryptedMoodEntry(Base):
