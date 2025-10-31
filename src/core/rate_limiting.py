@@ -53,14 +53,34 @@ def get_client_identifier(request: Request) -> str:
     return f"ip:{get_remote_address(request)}"
 
 
-# Initialize rate limiter
-limiter = Limiter(
-    key_func=get_client_identifier,
-    default_limits=[],  # No default limits - apply per endpoint
-    storage_uri=f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}",  # Distributed rate limiting
-    strategy="fixed-window",  # Fixed time window (simple and efficient)
-    headers_enabled=True,  # Return rate limit info in headers
-)
+# Initialize rate limiter with Redis fallback to in-memory
+# Try Redis first (production), fallback to memory (development)
+try:
+    # Try Redis connection for distributed rate limiting
+    storage_uri = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}"
+    if settings.REDIS_PASSWORD:
+        storage_uri = f"redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}"
+
+    limiter = Limiter(
+        key_func=get_client_identifier,
+        default_limits=[],  # No default limits - apply per endpoint
+        storage_uri=storage_uri,
+        strategy="fixed-window",  # Fixed time window (simple and efficient)
+        headers_enabled=True,  # Return rate limit info in headers
+    )
+except Exception as e:
+    # Fallback to in-memory storage (for development without Redis)
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Redis not available, using in-memory rate limiting: {e}")
+
+    limiter = Limiter(
+        key_func=get_client_identifier,
+        default_limits=[],
+        strategy="fixed-window",
+        headers_enabled=True,
+        # No storage_uri = in-memory storage
+    )
 
 
 # ============================================================================
