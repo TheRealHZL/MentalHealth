@@ -19,7 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.core.database import get_async_session
 from src.core.rls_middleware import set_user_context
-from src.core.security import decode_access_token
+from src.core.security import decode_token
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class RLSMiddleware(BaseHTTPMiddleware):
             token = auth_header.replace("Bearer ", "")
 
             # Decode token
-            payload = decode_access_token(token)
+            payload = decode_token(token)
 
             if not payload:
                 return None

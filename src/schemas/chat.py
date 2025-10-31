@@ -478,7 +478,7 @@ class ChatTrainingPair(BaseSchema):
     )
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "user_input": "Ich fühle mich heute sehr niedergeschlagen und weiß nicht warum. Alles scheint hoffnungslos.",
                 "ai_response": "Es tut mir leid zu hören, dass du dich so fühlst. Niedergeschlagenheit kann sehr belastend sein, besonders wenn man den Grund nicht versteht. Das ist ein mutiger Schritt, dass du darüber sprichst. Manchmal können unsere Gefühle von vielen Faktoren beeinflusst werden - Stress, Schlafmangel, oder auch einfach natürliche emotionale Schwankungen. Magst du mir erzählen, wie dein Tag bisher verlaufen ist?",
