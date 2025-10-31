@@ -13,11 +13,12 @@ How it works:
 Security: This ensures that even with SQL injection, users can only access their own data!
 """
 
-from typing import Optional, Callable
-from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 import logging
+from typing import Callable, Optional
+from uuid import UUID
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -58,14 +59,13 @@ class RLSContextManager:
         try:
             # Set user_id
             await self.session.execute(
-                text("SET LOCAL app.user_id = :user_id"),
-                {"user_id": str(self.user_id)}
+                text("SET LOCAL app.user_id = :user_id"), {"user_id": str(self.user_id)}
             )
 
             # Set admin flag
             await self.session.execute(
                 text("SET LOCAL app.is_admin = :is_admin"),
-                {"is_admin": str(self.is_admin).lower()}
+                {"is_admin": str(self.is_admin).lower()},
             )
 
             self._context_set = True
@@ -96,19 +96,17 @@ class RLSContextManager:
         """Verify that RLS context is properly set (for testing)"""
         try:
             result = await self.session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         current_setting('app.user_id', true) as user_id,
                         current_setting('app.is_admin', true) as is_admin
-                """)
+                """
+                )
             )
             row = result.fetchone()
 
-            return {
-                "user_id": row[0],
-                "is_admin": row[1],
-                "is_set": row[0] is not None
-            }
+            return {"user_id": row[0], "is_admin": row[1], "is_set": row[0] is not None}
 
         except Exception as e:
             logger.error(f"❌ Failed to verify RLS context: {e}")
@@ -127,7 +125,9 @@ def get_rls_context(session: AsyncSession, user_id: UUID, is_admin: bool = False
 
 
 # Helper functions for common operations
-async def set_user_context(session: AsyncSession, user_id: UUID, is_admin: bool = False):
+async def set_user_context(
+    session: AsyncSession, user_id: UUID, is_admin: bool = False
+):
     """
     Set RLS context for the current session
 
@@ -135,13 +135,12 @@ async def set_user_context(session: AsyncSession, user_id: UUID, is_admin: bool 
     """
     try:
         await session.execute(
-            text("SET LOCAL app.user_id = :user_id"),
-            {"user_id": str(user_id)}
+            text("SET LOCAL app.user_id = :user_id"), {"user_id": str(user_id)}
         )
 
         await session.execute(
             text("SET LOCAL app.is_admin = :is_admin"),
-            {"is_admin": str(is_admin).lower()}
+            {"is_admin": str(is_admin).lower()},
         )
 
         logger.debug(f"✅ RLS context set for user {user_id}")
@@ -161,25 +160,23 @@ async def verify_rls_enabled(session: AsyncSession, table_name: str) -> dict:
     """
     try:
         result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     relrowsecurity as rls_enabled,
                     relforcerowsecurity as force_rls
                 FROM pg_class
                 WHERE relname = :table_name
-            """),
-            {"table_name": table_name}
+            """
+            ),
+            {"table_name": table_name},
         )
         row = result.fetchone()
 
         if not row:
             return {"error": f"Table {table_name} not found"}
 
-        return {
-            "table": table_name,
-            "rls_enabled": row[0],
-            "force_rls": row[1]
-        }
+        return {"table": table_name, "rls_enabled": row[0], "force_rls": row[1]}
 
     except Exception as e:
         logger.error(f"❌ Failed to verify RLS on {table_name}: {e}")
@@ -196,7 +193,8 @@ async def get_rls_policies(session: AsyncSession, table_name: str) -> list:
     """
     try:
         result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     polname as policy_name,
                     polcmd as command,
@@ -205,18 +203,21 @@ async def get_rls_policies(session: AsyncSession, table_name: str) -> list:
                 FROM pg_policies
                 WHERE tablename = :table_name
                 ORDER BY polname
-            """),
-            {"table_name": table_name}
+            """
+            ),
+            {"table_name": table_name},
         )
 
         policies = []
         for row in result.fetchall():
-            policies.append({
-                "name": row[0],
-                "command": row[1],
-                "using": row[2],
-                "with_check": row[3]
-            })
+            policies.append(
+                {
+                    "name": row[0],
+                    "command": row[1],
+                    "using": row[2],
+                    "with_check": row[3],
+                }
+            )
 
         return policies
 
@@ -227,10 +228,7 @@ async def get_rls_policies(session: AsyncSession, table_name: str) -> list:
 
 # Testing utilities
 async def test_user_isolation(
-    session: AsyncSession,
-    user_a_id: UUID,
-    user_b_id: UUID,
-    table_name: str
+    session: AsyncSession, user_a_id: UUID, user_b_id: UUID, table_name: str
 ) -> dict:
     """
     Test that user isolation is working correctly
@@ -254,16 +252,12 @@ async def test_user_isolation(
     try:
         # Query as User A
         await set_user_context(session, user_a_id)
-        result_a = await session.execute(
-            text(f"SELECT COUNT(*) FROM {table_name}")
-        )
+        result_a = await session.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
         count_a = result_a.scalar()
 
         # Query as User B
         await set_user_context(session, user_b_id)
-        result_b = await session.execute(
-            text(f"SELECT COUNT(*) FROM {table_name}")
-        )
+        result_b = await session.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
         count_b = result_b.scalar()
 
         return {
@@ -271,23 +265,17 @@ async def test_user_isolation(
             "user_a_count": count_a,
             "user_b_count": count_b,
             "isolated": True,  # If no exception, isolation is working
-            "note": "Counts may be the same if both users have same number of entries"
+            "note": "Counts may be the same if both users have same number of entries",
         }
 
     except Exception as e:
         logger.error(f"❌ User isolation test failed: {e}")
-        return {
-            "table": table_name,
-            "isolated": False,
-            "error": str(e)
-        }
+        return {"table": table_name, "isolated": False, "error": str(e)}
 
 
 # FastAPI dependency
 async def get_rls_session(
-    session: AsyncSession,
-    user_id: Optional[UUID] = None,
-    is_admin: bool = False
+    session: AsyncSession, user_id: Optional[UUID] = None, is_admin: bool = False
 ):
     """
     FastAPI dependency to get a session with RLS context
@@ -311,11 +299,11 @@ async def get_rls_session(
 
 
 __all__ = [
-    'RLSContextManager',
-    'get_rls_context',
-    'set_user_context',
-    'verify_rls_enabled',
-    'get_rls_policies',
-    'test_user_isolation',
-    'get_rls_session'
+    "RLSContextManager",
+    "get_rls_context",
+    "set_user_context",
+    "verify_rls_enabled",
+    "get_rls_policies",
+    "test_user_isolation",
+    "get_rls_session",
 ]

@@ -7,11 +7,13 @@ Only the user with their master key can decrypt the content.
 The server NEVER sees plaintext data!
 """
 
-from sqlalchemy import Column, String, LargeBinary, DateTime, Integer, Boolean, Text
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship
-from datetime import datetime
 import uuid
+from datetime import datetime
+
+from sqlalchemy import (Boolean, Column, DateTime, Integer, LargeBinary,
+                        String, Text)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import relationship
 
 from src.models.base import Base
 
@@ -34,6 +36,7 @@ class EncryptedMoodEntry(Base):
     - user_id
     - entry_type
     """
+
     __tablename__ = "encrypted_mood_entries"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -49,7 +52,9 @@ class EncryptedMoodEntry(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Encryption metadata
-    encryption_version = Column(Integer, default=1, nullable=False)  # For future algorithm upgrades
+    encryption_version = Column(
+        Integer, default=1, nullable=False
+    )  # For future algorithm upgrades
     key_id = Column(String(64), nullable=True)  # For key rotation (future)
 
     # Soft delete (for GDPR compliance)
@@ -73,6 +78,7 @@ class EncryptedDreamEntry(Base):
     - symbols (encrypted)
     - interpretation (encrypted)
     """
+
     __tablename__ = "encrypted_dream_entries"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -111,6 +117,7 @@ class EncryptedTherapyNote(Base):
     - worksheet_data (encrypted)
     - reflection (encrypted)
     """
+
     __tablename__ = "encrypted_therapy_notes"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -147,17 +154,22 @@ class EncryptedChatMessage(Base):
     - ai_response (encrypted)
     - context (encrypted)
     """
+
     __tablename__ = "encrypted_chat_messages"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    session_id = Column(UUID(as_uuid=True), nullable=True, index=True)  # For grouping conversations
+    session_id = Column(
+        UUID(as_uuid=True), nullable=True, index=True
+    )  # For grouping conversations
 
     # Encrypted payload
     encrypted_data = Column(LargeBinary, nullable=False)
 
     # Metadata
-    message_type = Column(String(20), default="chat", nullable=False)  # 'user' or 'assistant'
+    message_type = Column(
+        String(20), default="chat", nullable=False
+    )  # 'user' or 'assistant'
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     # Encryption metadata
@@ -184,6 +196,7 @@ class UserEncryptionKey(Base):
     - Key derivation parameters (salt, iterations)
     - Key recovery hints (optional)
     """
+
     __tablename__ = "user_encryption_keys"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -192,7 +205,9 @@ class UserEncryptionKey(Base):
     # Key derivation parameters
     # Salt is stored here (safe to store, not the key itself!)
     key_salt = Column(LargeBinary, nullable=False)  # Random salt for PBKDF2
-    key_iterations = Column(Integer, default=600000, nullable=False)  # PBKDF2 iterations
+    key_iterations = Column(
+        Integer, default=600000, nullable=False
+    )  # PBKDF2 iterations
     key_algorithm = Column(String(50), default="PBKDF2-SHA256", nullable=False)
 
     # Current key version (for rotation)
@@ -200,7 +215,9 @@ class UserEncryptionKey(Base):
 
     # Recovery options (optional, user-controlled)
     has_recovery_key = Column(Boolean, default=False, nullable=False)
-    recovery_key_encrypted = Column(LargeBinary, nullable=True)  # Encrypted with secondary password
+    recovery_key_encrypted = Column(
+        LargeBinary, nullable=True
+    )  # Encrypted with secondary password
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

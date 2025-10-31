@@ -28,21 +28,19 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('token')
-
-      // Fetch stats
-      const statsRes = await fetch('/api/v1/admin/stats', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      // Fetch stats using apiClient (uses httpOnly cookies automatically)
+      const statsData = await fetch('/api/v1/admin/stats', {
+        credentials: 'include' // Include cookies
       })
 
-      if (statsRes.ok) {
-        const statsData = await statsRes.json()
-        setStats(statsData)
+      if (statsData.ok) {
+        const data = await statsData.json()
+        setStats(data)
       }
 
       // Fetch recent activity
       const activityRes = await fetch('/api/v1/admin/activity?limit=10', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include' // Include cookies
       })
 
       if (activityRes.ok) {

@@ -276,10 +276,10 @@ export function generateRecoveryKey(): string {
 // ========================================
 
 /**
- * Convert ArrayBuffer to Base64
+ * Convert ArrayBuffer or Uint8Array to Base64
  */
-export function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
+export function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
@@ -302,7 +302,7 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
 /**
  * Convert string to ArrayBuffer
  */
-export function stringToArrayBuffer(str: string): ArrayBuffer {
+export function stringToArrayBuffer(str: string): Uint8Array {
   const encoder = new TextEncoder();
   return encoder.encode(str);
 }

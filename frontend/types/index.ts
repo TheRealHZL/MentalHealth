@@ -4,7 +4,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'patient' | 'therapist';
+  role: 'patient' | 'therapist' | 'admin';
   is_verified: boolean;
   created_at: string;
 }
@@ -150,4 +150,57 @@ export interface PaginatedResponse<T> {
 export interface ApiError {
   detail: string;
   status_code?: number;
+}
+
+// Admin Types
+export interface AdminStats {
+  totalUsers: number;
+  activeTrainingJobs: number;
+  totalModels: number;
+  totalDatasets: number;
+  systemHealth: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: 'patient' | 'therapist' | 'admin';
+  is_verified: boolean;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface TrainingJob {
+  id: string;
+  model_type: string;
+  status: string;
+  progress: number;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+  metrics?: {
+    loss?: number;
+    accuracy?: number;
+    epoch?: number;
+    total_epochs?: number;
+  };
+}
+
+export interface AIModel {
+  id: string;
+  model_type: string;
+  version: string;
+  is_active: boolean;
+  accuracy?: number;
+  created_at: string;
+}
+
+export interface Dataset {
+  id: string;
+  name: string;
+  description?: string;
+  size: number;
+  created_at: string;
 }

@@ -185,6 +185,58 @@ class ApiClient {
     return response.data;
   }
 
+  // Admin Endpoints
+  async getAdminStats(): Promise<any> {
+    const response = await this.client.get('/admin/stats');
+    return response.data;
+  }
+
+  async getTrainingJobs(): Promise<PaginatedResponse<any>> {
+    const response = await this.client.get('/ai/training/jobs');
+    return response.data;
+  }
+
+  async startTraining(data: any): Promise<any> {
+    const response = await this.client.post('/ai/training/start', data);
+    return response.data;
+  }
+
+  async stopTraining(jobId: string): Promise<void> {
+    await this.client.post(`/ai/training/jobs/${jobId}/stop`);
+  }
+
+  async getModels(): Promise<any> {
+    const response = await this.client.get('/admin/models');
+    return response.data;
+  }
+
+  async activateModel(modelId: string): Promise<any> {
+    const response = await this.client.post(`/admin/models/${modelId}/activate`);
+    return response.data;
+  }
+
+  async getDatasets(): Promise<any> {
+    const response = await this.client.get('/admin/datasets');
+    return response.data;
+  }
+
+  async uploadDataset(formData: FormData): Promise<any> {
+    const response = await this.client.post('/admin/datasets', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  }
+
+  async getAllUsers(): Promise<any> {
+    const response = await this.client.get('/admin/users');
+    return response.data;
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<any> {
+    const response = await this.client.put(`/admin/users/${userId}/role`, { role });
+    return response.data;
+  }
+
   // Helper to check if user is authenticated
   // Note: With httpOnly cookies, we check if user data exists in localStorage
   // The actual authentication is verified by backend via cookie

@@ -16,7 +16,7 @@ export function useAuth() {
     }
   };
 
-  const requireRole = (role: 'patient' | 'therapist') => {
+  const requireRole = (role: 'patient' | 'therapist' | 'admin') => {
     if (!isLoading && (!isAuthenticated || user?.role !== role)) {
       router.push('/login');
     }

@@ -4,25 +4,27 @@ Admin API Endpoints
 Spezielle Admin-Endpunkte für System-Management und Monitoring.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-from sqlalchemy import select, func, and_, or_
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.security import get_current_user_id, require_admin
 from src.core.database import get_async_session
+from src.core.security import get_current_user_id, require_admin
+from src.models.chat import ChatMessage, ChatSession
+from src.models.training import ModelVersion, TrainingDataset, TrainingJob
 from src.models.user_models import User, UserRole
-from src.models.training import TrainingDataset, TrainingJob, ModelVersion
-from src.models.chat import ChatSession, ChatMessage
 from src.schemas.user import UserResponse
-from pydantic import BaseModel
 
 router = APIRouter()
 
 # =============================================================================
 # Response Models
 # =============================================================================
+
 
 class AdminStats(BaseModel):
     totalUsers: int
@@ -33,6 +35,7 @@ class AdminStats(BaseModel):
     totalSessions: int
     totalMessages: int
 
+
 class ActivityItem(BaseModel):
     id: str
     type: str
@@ -40,18 +43,21 @@ class ActivityItem(BaseModel):
     timestamp: datetime
     user_id: Optional[str] = None
 
+
 class ActivityResponse(BaseModel):
     items: List[ActivityItem]
     total: int
+
 
 # =============================================================================
 # Admin Dashboard Stats
 # =============================================================================
 
+
 @router.get("/stats", response_model=AdminStats)
 async def get_admin_stats(
     current_user_id: str = Depends(require_admin),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Get admin dashboard statistics
@@ -91,24 +97,26 @@ async def get_admin_stats(
             totalDatasets=total_datasets or 0,
             systemHealth=system_health,
             totalSessions=total_sessions or 0,
-            totalMessages=total_messages or 0
+            totalMessages=total_messages or 0,
         )
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch stats: {str(e)}"
+            detail=f"Failed to fetch stats: {str(e)}",
         )
+
 
 # =============================================================================
 # Recent Activity
 # =============================================================================
 
+
 @router.get("/activity", response_model=ActivityResponse)
 async def get_recent_activity(
     limit: int = Query(10, ge=1, le=100),
     current_user_id: str = Depends(require_admin),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Get recent system activity
@@ -126,13 +134,15 @@ async def get_recent_activity(
         )
 
         for job in recent_training:
-            activities.append(ActivityItem(
-                id=str(job.id),
-                type="training",
-                message=f"Training job for {job.model_type} {job.status}",
-                timestamp=job.created_at,
-                user_id=str(job.created_by) if job.created_by else None
-            ))
+            activities.append(
+                ActivityItem(
+                    id=str(job.id),
+                    type="training",
+                    message=f"Training job for {job.model_type} {job.status}",
+                    timestamp=job.created_at,
+                    user_id=str(job.created_by) if job.created_by else None,
+                )
+            )
 
         # Get recent model versions
         recent_models = await db.scalars(
@@ -142,32 +152,33 @@ async def get_recent_activity(
         )
 
         for model in recent_models:
-            activities.append(ActivityItem(
-                id=str(model.id),
-                type="model",
-                message=f"New model version {model.version} for {model.model_type} created",
-                timestamp=model.created_at,
-                user_id=str(model.created_by) if model.created_by else None
-            ))
+            activities.append(
+                ActivityItem(
+                    id=str(model.id),
+                    type="model",
+                    message=f"New model version {model.version} for {model.model_type} created",
+                    timestamp=model.created_at,
+                    user_id=str(model.created_by) if model.created_by else None,
+                )
+            )
 
         # Sort by timestamp
         activities.sort(key=lambda x: x.timestamp, reverse=True)
         activities = activities[:limit]
 
-        return ActivityResponse(
-            items=activities,
-            total=len(activities)
-        )
+        return ActivityResponse(items=activities, total=len(activities))
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch activity: {str(e)}"
+            detail=f"Failed to fetch activity: {str(e)}",
         )
+
 
 # =============================================================================
 # User Management
 # =============================================================================
+
 
 @router.get("/users", response_model=List[UserResponse])
 async def get_all_users(
@@ -176,7 +187,7 @@ async def get_all_users(
     role: Optional[str] = None,
     search: Optional[str] = None,
     current_user_id: str = Depends(require_admin),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Get all users (paginated)
@@ -197,7 +208,7 @@ async def get_all_users(
                 or_(
                     User.email.ilike(search_pattern),
                     User.first_name.ilike(search_pattern),
-                    User.last_name.ilike(search_pattern)
+                    User.last_name.ilike(search_pattern),
                 )
             )
 
@@ -210,15 +221,16 @@ async def get_all_users(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch users: {str(e)}"
+            detail=f"Failed to fetch users: {str(e)}",
         )
+
 
 @router.patch("/users/{user_id}/role")
 async def update_user_role(
     user_id: str,
     new_role: str,
     current_user_id: str = Depends(require_admin),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Update user role
@@ -230,7 +242,7 @@ async def update_user_role(
     if new_role not in valid_roles:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid role. Must be one of: {valid_roles}"
+            detail=f"Invalid role. Must be one of: {valid_roles}",
         )
 
     try:
@@ -240,8 +252,7 @@ async def update_user_role(
 
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Update role
@@ -256,14 +267,15 @@ async def update_user_role(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update user role: {str(e)}"
+            detail=f"Failed to update user role: {str(e)}",
         )
+
 
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: str,
     current_user_id: str = Depends(require_admin),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Delete user account
@@ -274,7 +286,7 @@ async def delete_user(
     if user_id == current_user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete your own account"
+            detail="Cannot delete your own account",
         )
 
     try:
@@ -284,8 +296,7 @@ async def delete_user(
 
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Delete user (cascade will delete related data)
@@ -300,17 +311,19 @@ async def delete_user(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete user: {str(e)}"
+            detail=f"Failed to delete user: {str(e)}",
         )
+
 
 # =============================================================================
 # System Health
 # =============================================================================
 
+
 @router.get("/health")
 async def check_system_health(
     current_user_id: str = Depends(require_admin),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Detailed system health check
@@ -320,7 +333,7 @@ async def check_system_health(
     health_status = {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "components": {}
+        "components": {},
     }
 
     try:

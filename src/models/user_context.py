@@ -5,12 +5,14 @@ Stores user-specific AI context in encrypted format.
 Each user has completely isolated AI memory and context.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+import uuid
+from datetime import datetime, timedelta
+
+from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, String,
+                        Text)
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from datetime import datetime, timedelta
-import uuid
 
 from src.core.database import Base
 
@@ -28,11 +30,18 @@ class UserContext(Base):
 
     All sensitive context data is encrypted client-side.
     """
+
     __tablename__ = "user_contexts"
 
     # Primary fields
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True, unique=True)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+        unique=True,
+    )
 
     # Context type and version
     context_type = Column(String(50), nullable=False, default="general", index=True)
@@ -44,7 +53,9 @@ class UserContext(Base):
 
     # Metadata (unencrypted for queries)
     context_size_bytes = Column(Integer, nullable=True)  # Size tracking
-    last_updated = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now(), index=True)
+    last_updated = Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now(), index=True
+    )
     created_at = Column(DateTime, nullable=False, default=func.now())
 
     # Context lifecycle
@@ -108,11 +119,15 @@ class UserContext(Base):
             "context_type": self.context_type,
             "context_version": self.context_version,
             "context_size_bytes": self.context_size_bytes,
-            "last_updated": self.last_updated.isoformat() if self.last_updated else None,
+            "last_updated": (
+                self.last_updated.isoformat() if self.last_updated else None
+            ),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "is_active": self.is_active,
             "access_count": self.access_count,
-            "last_accessed": self.last_accessed.isoformat() if self.last_accessed else None,
+            "last_accessed": (
+                self.last_accessed.isoformat() if self.last_accessed else None
+            ),
             "conversation_count": self.conversation_count,
             "mood_entries_processed": self.mood_entries_processed,
             "dream_entries_processed": self.dream_entries_processed,
@@ -121,7 +136,7 @@ class UserContext(Base):
             "allow_learning": self.allow_learning,
             "context_retention_days": self.context_retention_days,
             "is_expired": self.is_expired,
-            "days_since_update": self.days_since_update
+            "days_since_update": self.days_since_update,
         }
 
         if include_encrypted and self.encrypted_context:
@@ -137,11 +152,14 @@ class AIConversationHistory(Base):
     Stores conversation history for context continuity.
     Each conversation is encrypted separately.
     """
+
     __tablename__ = "ai_conversation_history"
 
     # Primary fields
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
 
     # Session information
     session_id = Column(UUID(as_uuid=True), nullable=False, index=True)
@@ -182,7 +200,7 @@ class AIConversationHistory(Base):
             "token_count": self.token_count,
             "model_version": self.model_version,
             "confidence_score": self.confidence_score,
-            "processing_time_ms": self.processing_time_ms
+            "processing_time_ms": self.processing_time_ms,
         }
 
         if include_encrypted and self.encrypted_message:
@@ -198,11 +216,18 @@ class UserAIPreferences(Base):
     Stores user preferences for AI interactions.
     These are NOT encrypted (user preferences, not sensitive data).
     """
+
     __tablename__ = "user_ai_preferences"
 
     # Primary fields
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True, unique=True)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+        unique=True,
+    )
 
     # Conversation preferences
     response_style = Column(String(50), default="empathetic", nullable=False)
@@ -244,13 +269,17 @@ class UserAIPreferences(Base):
 
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=func.now())
-    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
 
     # Relationships
     user = relationship("User")
 
     def __repr__(self):
-        return f"<UserAIPreferences(user_id={self.user_id}, style={self.response_style})>"
+        return (
+            f"<UserAIPreferences(user_id={self.user_id}, style={self.response_style})>"
+        )
 
     def to_dict(self) -> dict:
         """Convert to dictionary"""
@@ -274,14 +303,18 @@ class UserAIPreferences(Base):
             "notify_on_patterns": self.notify_on_patterns,
             "notify_on_concerns": self.notify_on_concerns,
             "preferred_therapy_approaches": self.preferred_therapy_approaches,
-            "topics_of_interest": self.topics_of_interest
+            "topics_of_interest": self.topics_of_interest,
         }
 
 
 # Indexes for performance
 from sqlalchemy import Index
 
-Index('idx_user_contexts_user_type', UserContext.user_id, UserContext.context_type)
-Index('idx_user_contexts_updated', UserContext.last_updated.desc())
-Index('idx_conversation_history_user_session', AIConversationHistory.user_id, AIConversationHistory.session_id)
-Index('idx_conversation_history_timestamp', AIConversationHistory.timestamp.desc())
+Index("idx_user_contexts_user_type", UserContext.user_id, UserContext.context_type)
+Index("idx_user_contexts_updated", UserContext.last_updated.desc())
+Index(
+    "idx_conversation_history_user_session",
+    AIConversationHistory.user_id,
+    AIConversationHistory.session_id,
+)
+Index("idx_conversation_history_timestamp", AIConversationHistory.timestamp.desc())

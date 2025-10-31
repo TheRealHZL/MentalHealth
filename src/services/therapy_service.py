@@ -5,36 +5,37 @@ Business Logic für therapeutische Arbeitsblätter und Selbsthilfe-Tools.
 CBT-Techniken, Gedankenprotokolle, Therapievorbereitung etc.
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, desc, asc
-from typing import Dict, Any, List, Optional, Tuple, Union
-from datetime import date, datetime, timedelta
-import uuid
 import logging
+import uuid
 from collections import Counter
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from sqlalchemy import and_, asc, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import TherapyNote, TherapyNoteType, TherapyTechnique
-from src.schemas.ai import TherapyNoteCreate, TherapyNoteUpdate, PaginationParams
+from src.schemas.ai import (PaginationParams, TherapyNoteCreate,
+                            TherapyNoteUpdate)
 
 logger = logging.getLogger(__name__)
 
+
 class TherapyService:
     """Therapy Tools & Structured Worksheets Service"""
-    
+
     def __init__(self, db: AsyncSession):
         self.db = db
-    
+
     # =============================================================================
     # CRUD Operations
     # =============================================================================
-    
+
     async def create_therapy_note(
-        self,
-        user_id: str,
-        note_data: TherapyNoteCreate
+        self, user_id: str, note_data: TherapyNoteCreate
     ) -> TherapyNote:
         """Create new therapy note/worksheet"""
-        
+
         therapy_note = TherapyNote(
             user_id=uuid.UUID(user_id),
             note_date=note_data.note_date,
@@ -49,23 +50,31 @@ class TherapyService:
             goals_discussed=note_data.goals_discussed,
             progress_made=note_data.progress_made,
             challenges_faced=note_data.challenges_faced,
-            mood_before_session=note_data.mood_before_session.value if note_data.mood_before_session else None,
-            mood_after_session=note_data.mood_after_session.value if note_data.mood_after_session else None,
+            mood_before_session=(
+                note_data.mood_before_session.value
+                if note_data.mood_before_session
+                else None
+            ),
+            mood_after_session=(
+                note_data.mood_after_session.value
+                if note_data.mood_after_session
+                else None
+            ),
             key_emotions=note_data.key_emotions,
             key_insights=note_data.key_insights,
             action_items=note_data.action_items,
             is_private=note_data.is_private,
             share_with_therapist=note_data.share_with_therapist,
-            tags=note_data.tags
+            tags=note_data.tags,
         )
-        
+
         self.db.add(therapy_note)
         await self.db.commit()
         await self.db.refresh(therapy_note)
-        
+
         logger.info(f"Created therapy note for user {user_id}: {note_data.note_type}")
         return therapy_note
-    
+
     async def create_thought_record(
         self,
         user_id: str,
@@ -76,10 +85,10 @@ class TherapyService:
         evidence_for: str,
         evidence_against: str,
         balanced_thought: str,
-        new_emotion_intensity: int
+        new_emotion_intensity: int,
     ) -> TherapyNote:
         """Create CBT thought record"""
-        
+
         thought_record_content = f"""GEDANKENPROTOKOLL (CBT)
         
 🎯 SITUATION:
@@ -104,7 +113,7 @@ class TherapyService:
 {emotion} - {new_emotion_intensity}/10
 
 📈 VERBESSERUNG: {emotion_intensity - new_emotion_intensity} Punkte"""
-        
+
         thought_record = TherapyNote(
             user_id=uuid.UUID(user_id),
             note_date=date.today(),
@@ -115,15 +124,15 @@ class TherapyService:
             key_emotions=[emotion],
             mood_before_session=emotion_intensity,
             mood_after_session=new_emotion_intensity,
-            tags=["gedankenprotokoll", "cbt", "selbsthilfe"]
+            tags=["gedankenprotokoll", "cbt", "selbsthilfe"],
         )
-        
+
         self.db.add(thought_record)
         await self.db.commit()
         await self.db.refresh(thought_record)
-        
+
         return thought_record
-    
+
     async def create_therapy_preparation(
         self,
         user_id: str,
@@ -133,10 +142,10 @@ class TherapyService:
         homework_review: str,
         questions_for_therapist: List[str],
         current_mood: int,
-        progress_since_last: str
+        progress_since_last: str,
     ) -> TherapyNote:
         """Create therapy session preparation worksheet"""
-        
+
         prep_content = f"""THERAPIE-VORBEREITUNG
         
 📅 Vorbereitung für nächste Sitzung
@@ -160,7 +169,7 @@ class TherapyService:
 
 📈 FORTSCHRITT SEIT LETZTER SITZUNG:
 {progress_since_last}"""
-        
+
         prep_note = TherapyNote(
             user_id=uuid.UUID(user_id),
             note_date=date.today(),
@@ -171,15 +180,15 @@ class TherapyService:
             challenges_faced=current_challenges,
             mood_before_session=current_mood,
             progress_made=progress_since_last,
-            tags=["vorbereitung", "therapie", "ziele"]
+            tags=["vorbereitung", "therapie", "ziele"],
         )
-        
+
         self.db.add(prep_note)
         await self.db.commit()
         await self.db.refresh(prep_note)
-        
+
         return prep_note
-    
+
     async def create_emotion_regulation_worksheet(
         self,
         user_id: str,
@@ -189,10 +198,10 @@ class TherapyService:
         physical_sensations: List[str],
         coping_strategies_used: List[str],
         effectiveness_rating: Dict[str, int],
-        alternative_strategies: List[str]
+        alternative_strategies: List[str],
     ) -> TherapyNote:
         """Create emotion regulation worksheet (DBT style)"""
-        
+
         emotion_content = f"""EMOTIONSREGULATION ARBEITSBLATT
         
 🎭 AUSLÖSENDE SITUATION:
@@ -212,7 +221,7 @@ class TherapyService:
 
 📝 ERKENNTNISSE:
 Was hat funktioniert? Was würde ich anders machen?"""
-        
+
         emotion_note = TherapyNote(
             user_id=uuid.UUID(user_id),
             note_date=date.today(),
@@ -221,24 +230,23 @@ Was hat funktioniert? Was würde ich anders machen?"""
             content=emotion_content,
             techniques_used=[TherapyTechnique.DBT.value],
             key_emotions=emotions_felt,
-            mood_before_session=max(emotion_intensities.values()) if emotion_intensities else 5,
-            tags=["emotionsregulation", "dbt", "bewältigung"]
+            mood_before_session=(
+                max(emotion_intensities.values()) if emotion_intensities else 5
+            ),
+            tags=["emotionsregulation", "dbt", "bewältigung"],
         )
-        
+
         self.db.add(emotion_note)
         await self.db.commit()
         await self.db.refresh(emotion_note)
-        
+
         return emotion_note
-    
+
     async def create_quick_reflection(
-        self,
-        user_id: str,
-        reflection_text: str,
-        current_mood: int
+        self, user_id: str, reflection_text: str, current_mood: int
     ) -> TherapyNote:
         """Create quick self-reflection entry"""
-        
+
         reflection_note = TherapyNote(
             user_id=uuid.UUID(user_id),
             note_date=date.today(),
@@ -246,19 +254,19 @@ Was hat funktioniert? Was würde ich anders machen?"""
             title=f"Reflexion - {date.today().strftime('%d.%m.%Y')}",
             content=reflection_text,
             mood_before_session=current_mood,
-            tags=["reflexion", "selbsthilfe", "quick"]
+            tags=["reflexion", "selbsthilfe", "quick"],
         )
-        
+
         self.db.add(reflection_note)
         await self.db.commit()
         await self.db.refresh(reflection_note)
-        
+
         return reflection_note
-    
+
     # =============================================================================
     # Structured Therapy Tools
     # =============================================================================
-    
+
     def get_cbt_worksheet_template(self) -> Dict[str, Any]:
         """CBT Gedankenprotokoll Template"""
         return {
@@ -269,51 +277,58 @@ Was hat funktioniert? Was würde ich anders machen?"""
                     "label": "Situation",
                     "type": "textarea",
                     "placeholder": "Beschreibe die Situation, in der der Gedanke auftrat",
-                    "required": True
+                    "required": True,
                 },
                 {
                     "label": "Automatischer Gedanke",
-                    "type": "textarea", 
+                    "type": "textarea",
                     "placeholder": "Welcher Gedanke ging dir durch den Kopf?",
-                    "required": True
+                    "required": True,
                 },
                 {
                     "label": "Emotion",
                     "type": "select",
-                    "options": ["Trauer", "Angst", "Wut", "Scham", "Schuld", "Frustration"],
-                    "required": True
+                    "options": [
+                        "Trauer",
+                        "Angst",
+                        "Wut",
+                        "Scham",
+                        "Schuld",
+                        "Frustration",
+                    ],
+                    "required": True,
                 },
                 {
                     "label": "Intensität der Emotion",
                     "type": "scale",
                     "range": [1, 10],
-                    "required": True
+                    "required": True,
                 },
                 {
                     "label": "Beweise dafür",
                     "type": "textarea",
-                    "placeholder": "Was spricht für diesen Gedanken?"
+                    "placeholder": "Was spricht für diesen Gedanken?",
                 },
                 {
-                    "label": "Beweise dagegen", 
+                    "label": "Beweise dagegen",
                     "type": "textarea",
-                    "placeholder": "Was spricht gegen diesen Gedanken?"
+                    "placeholder": "Was spricht gegen diesen Gedanken?",
                 },
                 {
                     "label": "Ausgewogener Gedanke",
                     "type": "textarea",
                     "placeholder": "Formuliere einen realistischeren Gedanken",
-                    "required": True
+                    "required": True,
                 },
                 {
                     "label": "Neue Intensität",
-                    "type": "scale", 
+                    "type": "scale",
                     "range": [1, 10],
-                    "required": True
-                }
-            ]
+                    "required": True,
+                },
+            ],
         }
-    
+
     def get_therapy_prep_template(self) -> Dict[str, Any]:
         """Therapie-Vorbereitung Template"""
         return {
@@ -324,39 +339,39 @@ Was hat funktioniert? Was würde ich anders machen?"""
                     "label": "Ziele für diese Sitzung",
                     "type": "list",
                     "placeholder": "Was möchtest du heute besprechen?",
-                    "max_items": 5
+                    "max_items": 5,
                 },
                 {
                     "label": "Aktuelle Herausforderungen",
-                    "type": "list", 
+                    "type": "list",
                     "placeholder": "Womit kämpfst du gerade?",
-                    "max_items": 5
+                    "max_items": 5,
                 },
                 {
                     "label": "Hausaufgaben Review",
                     "type": "textarea",
-                    "placeholder": "Wie sind die Aufgaben gelaufen?"
+                    "placeholder": "Wie sind die Aufgaben gelaufen?",
                 },
                 {
                     "label": "Fragen an Therapeut",
                     "type": "list",
                     "placeholder": "Was möchtest du fragen?",
-                    "max_items": 10
+                    "max_items": 10,
                 },
                 {
                     "label": "Aktuelle Stimmung",
                     "type": "scale",
                     "range": [1, 10],
-                    "required": True
+                    "required": True,
                 },
                 {
                     "label": "Fortschritt seit letzter Sitzung",
                     "type": "textarea",
-                    "placeholder": "Was hat sich verändert?"
-                }
-            ]
+                    "placeholder": "Was hat sich verändert?",
+                },
+            ],
         }
-    
+
     def get_emotion_regulation_template(self) -> Dict[str, Any]:
         """Emotionsregulation Template (DBT)"""
         return {
@@ -367,115 +382,123 @@ Was hat funktioniert? Was würde ich anders machen?"""
                     "label": "Auslösende Situation",
                     "type": "textarea",
                     "placeholder": "Was ist passiert?",
-                    "required": True
+                    "required": True,
                 },
                 {
                     "label": "Emotionen",
                     "type": "emotion_intensity_grid",
                     "emotions": ["Wut", "Trauer", "Angst", "Freude", "Scham", "Schuld"],
-                    "scale": [1, 10]
+                    "scale": [1, 10],
                 },
                 {
                     "label": "Körperliche Empfindungen",
                     "type": "checklist",
                     "options": [
-                        "Herzrasen", "Schwitzen", "Zittern", "Anspannung", 
-                        "Atemnot", "Schwindel", "Übelkeit", "Müdigkeit"
-                    ]
+                        "Herzrasen",
+                        "Schwitzen",
+                        "Zittern",
+                        "Anspannung",
+                        "Atemnot",
+                        "Schwindel",
+                        "Übelkeit",
+                        "Müdigkeit",
+                    ],
                 },
                 {
                     "label": "Bewältigungsstrategien verwendet",
                     "type": "list",
                     "placeholder": "Was hast du versucht?",
-                    "max_items": 5
+                    "max_items": 5,
                 },
                 {
                     "label": "Wirksamkeit der Strategien",
                     "type": "effectiveness_rating",
-                    "scale": [1, 10]
+                    "scale": [1, 10],
                 },
                 {
                     "label": "Alternative Strategien",
                     "type": "list",
                     "placeholder": "Was könntest du nächstes Mal versuchen?",
-                    "max_items": 5
-                }
-            ]
+                    "max_items": 5,
+                },
+            ],
         }
-    
+
     def get_mood_tracking_template(self) -> Dict[str, Any]:
         """Detailliertes Mood Tracking Template"""
         return {
             "name": "Detailliertes Stimmungstagebuch",
             "description": "Umfassendes Tracking für Stimmung und Einflussfaktoren",
             "fields": [
-                {
-                    "label": "Datum und Uhrzeit",
-                    "type": "datetime",
-                    "required": True
-                },
+                {"label": "Datum und Uhrzeit", "type": "datetime", "required": True},
                 {
                     "label": "Stimmung",
                     "type": "scale",
                     "range": [1, 10],
-                    "required": True
+                    "required": True,
                 },
                 {
-                    "label": "Energielevel", 
+                    "label": "Energielevel",
                     "type": "scale",
                     "range": [1, 10],
-                    "required": True
+                    "required": True,
                 },
                 {
                     "label": "Stresslevel",
-                    "type": "scale", 
+                    "type": "scale",
                     "range": [1, 10],
-                    "required": True
+                    "required": True,
                 },
                 {
                     "label": "Schlaf letzte Nacht",
                     "type": "sleep_quality",
                     "hours": [0, 12],
-                    "quality": [1, 10]
+                    "quality": [1, 10],
                 },
                 {
                     "label": "Aktivitäten heute",
                     "type": "checklist",
                     "options": [
-                        "Arbeit", "Sport", "Sozialer Kontakt", "Entspannung",
-                        "Therapie", "Meditation", "Kreatives", "Hausarbeit"
-                    ]
+                        "Arbeit",
+                        "Sport",
+                        "Sozialer Kontakt",
+                        "Entspannung",
+                        "Therapie",
+                        "Meditation",
+                        "Kreatives",
+                        "Hausarbeit",
+                    ],
                 },
                 {
                     "label": "Auslöser/Trigger",
                     "type": "list",
                     "placeholder": "Was hat deine Stimmung beeinflusst?",
-                    "max_items": 5
+                    "max_items": 5,
                 },
                 {
                     "label": "Dankbarkeit",
                     "type": "list",
-                    "placeholder": "Wofür bist du heute dankbar?", 
-                    "max_items": 3
+                    "placeholder": "Wofür bist du heute dankbar?",
+                    "max_items": 3,
                 },
                 {
                     "label": "Notizen",
                     "type": "textarea",
-                    "placeholder": "Weitere Gedanken und Beobachtungen"
-                }
-            ]
+                    "placeholder": "Weitere Gedanken und Beobachtungen",
+                },
+            ],
         }
-    
+
     def get_self_care_suggestions(self, mood_score: int) -> List[str]:
         """Get mood-based self-care suggestions"""
-        
+
         if mood_score <= 3:
             return [
                 "🛁 Warmes Bad oder Dusche nehmen",
                 "☕ Einen beruhigenden Tee trinken",
                 "🤗 Dir selbst Mitgefühl zeigen",
                 "📱 Einen vertrauten Menschen anrufen",
-                "🧘 5 Minuten Atemübungen"
+                "🧘 5 Minuten Atemübungen",
             ]
         elif mood_score <= 6:
             return [
@@ -483,7 +506,7 @@ Was hat funktioniert? Was würde ich anders machen?"""
                 "📖 In einem guten Buch lesen",
                 "🎵 Entspannende Musik hören",
                 "📝 Gedanken aufschreiben",
-                "🌱 Eine kleine Pflanze versorgen"
+                "🌱 Eine kleine Pflanze versorgen",
             ]
         else:
             return [
@@ -491,65 +514,80 @@ Was hat funktioniert? Was würde ich anders machen?"""
                 "💪 Sport oder Bewegung",
                 "🤝 Zeit mit Freunden verbringen",
                 "🎯 Neues Ziel setzen",
-                "📚 Etwas Neues lernen"
+                "📚 Etwas Neues lernen",
             ]
-    
+
     # =============================================================================
     # Analytics & Progress Tracking
     # =============================================================================
-    
+
     async def analyze_therapy_progress(self, user_id: str, days: int) -> Dict[str, Any]:
         """Analyze therapy progress over time"""
-        
+
         start_date = datetime.now() - timedelta(days=days)
-        
+
         result = await self.db.execute(
-            select(TherapyNote).where(
+            select(TherapyNote)
+            .where(
                 and_(
                     TherapyNote.user_id == uuid.UUID(user_id),
-                    TherapyNote.created_at >= start_date
+                    TherapyNote.created_at >= start_date,
                 )
-            ).order_by(TherapyNote.note_date)
+            )
+            .order_by(TherapyNote.note_date)
         )
-        
+
         notes = list(result.scalars().all())
-        
+
         if not notes:
-            return {"total_notes": 0, "message": "Keine Therapie-Notizen in diesem Zeitraum"}
-        
+            return {
+                "total_notes": 0,
+                "message": "Keine Therapie-Notizen in diesem Zeitraum",
+            }
+
         # Progress analysis
         mood_before = [n.mood_before_session for n in notes if n.mood_before_session]
         mood_after = [n.mood_after_session for n in notes if n.mood_after_session]
-        
+
         techniques_used = []
         for note in notes:
             if note.techniques_used:
                 techniques_used.extend(note.techniques_used)
-        
+
         goals_discussed = []
         for note in notes:
             if note.goals_discussed:
                 goals_discussed.extend(note.goals_discussed)
-        
+
         return {
             "total_notes": len(notes),
             "note_types": dict(Counter(note.note_type.value for note in notes)),
-            "avg_mood_before": round(sum(mood_before) / len(mood_before), 1) if mood_before else None,
-            "avg_mood_after": round(sum(mood_after) / len(mood_after), 1) if mood_after else None,
-            "mood_improvement": round(
-                (sum(mood_after) / len(mood_after)) - (sum(mood_before) / len(mood_before)), 1
-            ) if mood_before and mood_after else None,
+            "avg_mood_before": (
+                round(sum(mood_before) / len(mood_before), 1) if mood_before else None
+            ),
+            "avg_mood_after": (
+                round(sum(mood_after) / len(mood_after), 1) if mood_after else None
+            ),
+            "mood_improvement": (
+                round(
+                    (sum(mood_after) / len(mood_after))
+                    - (sum(mood_before) / len(mood_before)),
+                    1,
+                )
+                if mood_before and mood_after
+                else None
+            ),
             "most_used_techniques": dict(Counter(techniques_used).most_common(3)),
             "common_goals": dict(Counter(goals_discussed).most_common(5)),
-            "consistency_score": self._calculate_consistency_score(notes, days)
+            "consistency_score": self._calculate_consistency_score(notes, days),
         }
-    
+
     def _calculate_consistency_score(self, notes: List[TherapyNote], days: int) -> int:
         """Calculate consistency score (0-100)"""
-        
+
         # How regularly are notes being made?
         note_frequency = len(notes) / days
-        
+
         # Score based on frequency (aim for 2-3 times per week)
         if note_frequency >= 0.4:  # ~3 times per week
             frequency_score = 100
@@ -559,43 +597,47 @@ Was hat funktioniert? Was würde ich anders machen?"""
             frequency_score = 60
         else:
             frequency_score = int(note_frequency * 400)  # Scale proportionally
-        
+
         return min(100, frequency_score)
-    
+
     # =============================================================================
     # Rest of CRUD and helper methods (similar to previous services)
     # =============================================================================
-    
-    async def get_therapy_note_by_id(self, note_id: str, user_id: str) -> Optional[TherapyNote]:
+
+    async def get_therapy_note_by_id(
+        self, note_id: str, user_id: str
+    ) -> Optional[TherapyNote]:
         """Get therapy note by ID"""
         result = await self.db.execute(
             select(TherapyNote).where(
                 and_(
                     TherapyNote.id == uuid.UUID(note_id),
-                    TherapyNote.user_id == uuid.UUID(user_id)
+                    TherapyNote.user_id == uuid.UUID(user_id),
                 )
             )
         )
         return result.scalar_one_or_none()
-    
-    async def update_ai_analysis(self, note_id: uuid.UUID, ai_analysis: Dict[str, Any]) -> None:
+
+    async def update_ai_analysis(
+        self, note_id: uuid.UUID, ai_analysis: Dict[str, Any]
+    ) -> None:
         """Update AI analysis for therapy note"""
         result = await self.db.execute(
             select(TherapyNote).where(TherapyNote.id == note_id)
         )
         therapy_note = result.scalar_one_or_none()
-        
+
         if therapy_note:
             therapy_note.ai_insights = ai_analysis.get("progress_insights")
             therapy_note.progress_analysis = ai_analysis.get("goal_assessment")
             await self.db.commit()
-    
+
     def get_motivation_message(self, monthly_stats: Dict[str, Any]) -> str:
         """Get motivational message based on progress"""
-        
+
         total_notes = monthly_stats.get("total_notes", 0)
         mood_improvement = monthly_stats.get("mood_improvement", 0)
-        
+
         if total_notes == 0:
             return "Starte deine Selbstreflexions-Reise! Jeder Schritt zählt. 🌱"
         elif mood_improvement and mood_improvement > 1:

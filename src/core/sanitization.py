@@ -4,27 +4,41 @@ Input Sanitization Module
 Provides utilities to sanitize user input and prevent XSS, injection attacks.
 """
 
-import bleach
-from typing import Optional, List
 import re
+from typing import List, Optional
 
+import bleach
 
 # Allowed HTML tags for user-generated content
 ALLOWED_TAGS = [
-    'p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li',
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'blockquote', 'code', 'pre'
+    "p",
+    "br",
+    "strong",
+    "em",
+    "u",
+    "ul",
+    "ol",
+    "li",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "blockquote",
+    "code",
+    "pre",
 ]
 
 # Allowed HTML attributes
 ALLOWED_ATTRIBUTES = {
-    '*': ['class'],
-    'a': ['href', 'title', 'rel'],
-    'img': ['src', 'alt', 'title']
+    "*": ["class"],
+    "a": ["href", "title", "rel"],
+    "img": ["src", "alt", "title"],
 }
 
 # Allowed protocols for links
-ALLOWED_PROTOCOLS = ['http', 'https', 'mailto']
+ALLOWED_PROTOCOLS = ["http", "https", "mailto"]
 
 
 def sanitize_html(text: str, strip: bool = True) -> str:
@@ -51,7 +65,7 @@ def sanitize_html(text: str, strip: bool = True) -> str:
             tags=ALLOWED_TAGS,
             attributes=ALLOWED_ATTRIBUTES,
             protocols=ALLOWED_PROTOCOLS,
-            strip=True
+            strip=True,
         )
 
 
@@ -113,13 +127,13 @@ def sanitize_url(url: str) -> Optional[str]:
     url = url.strip()
 
     # Block dangerous protocols
-    dangerous_protocols = ['javascript:', 'data:', 'vbscript:', 'file:']
+    dangerous_protocols = ["javascript:", "data:", "vbscript:", "file:"]
     for protocol in dangerous_protocols:
         if url.lower().startswith(protocol):
             return None
 
     # Only allow http/https
-    if not url.startswith(('http://', 'https://', '/')):
+    if not url.startswith(("http://", "https://", "/")):
         return None
 
     return url
@@ -135,9 +149,9 @@ def sanitize_sql_like(text: str) -> str:
         return ""
 
     # Escape special SQL LIKE characters
-    text = text.replace('\\', '\\\\')  # Escape backslash first!
-    text = text.replace('%', '\\%')
-    text = text.replace('_', '\\_')
+    text = text.replace("\\", "\\\\")  # Escape backslash first!
+    text = text.replace("%", "\\%")
+    text = text.replace("_", "\\_")
 
     return text
 
@@ -157,22 +171,22 @@ def sanitize_filename(filename: str) -> str:
     filename = sanitize_text(filename)
 
     # Remove path separators
-    filename = filename.replace('/', '').replace('\\', '')
+    filename = filename.replace("/", "").replace("\\", "")
 
     # Remove null bytes
-    filename = filename.replace('\x00', '')
+    filename = filename.replace("\x00", "")
 
     # Remove leading dots (hidden files)
-    filename = filename.lstrip('.')
+    filename = filename.lstrip(".")
 
     # Only allow alphanumeric, dash, underscore, dot
-    filename = re.sub(r'[^a-zA-Z0-9._-]', '_', filename)
+    filename = re.sub(r"[^a-zA-Z0-9._-]", "_", filename)
 
     # Limit length
     if len(filename) > 255:
-        name, ext = filename.rsplit('.', 1) if '.' in filename else (filename, '')
+        name, ext = filename.rsplit(".", 1) if "." in filename else (filename, "")
         max_name_len = 255 - len(ext) - 1
-        filename = name[:max_name_len] + '.' + ext if ext else name[:255]
+        filename = name[:max_name_len] + "." + ext if ext else name[:255]
 
     return filename or "unnamed"
 

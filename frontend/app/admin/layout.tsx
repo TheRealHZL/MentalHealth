@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function AdminLayout({
   children,
@@ -9,47 +10,19 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const { user, isAuthenticated, isLoading } = useAuth()
 
   useEffect(() => {
-    // Check if user is admin
-    const checkAdminRole = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        if (!token) {
-          router.push('/login')
-          return
-        }
-
-        const response = await fetch('/api/v1/users/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          if (data.role === 'admin') {
-            setIsAdmin(true)
-          } else {
-            router.push('/dashboard')
-          }
-        } else {
-          router.push('/login')
-        }
-      } catch (error) {
-        console.error('Admin check failed:', error)
+    if (!isLoading) {
+      if (!isAuthenticated) {
         router.push('/login')
-      } finally {
-        setLoading(false)
+      } else if (user?.role !== 'admin') {
+        router.push('/dashboard')
       }
     }
+  }, [isLoading, isAuthenticated, user, router])
 
-    checkAdminRole()
-  }, [router])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -60,7 +33,7 @@ export default function AdminLayout({
     )
   }
 
-  if (!isAdmin) {
+  if (!isAuthenticated || user?.role !== 'admin') {
     return null
   }
 

@@ -38,9 +38,8 @@ export default function AdminTraining() {
 
   const fetchTrainingJobs = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch('/api/v1/ai/training/jobs', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include' // Include cookies
       })
 
       if (response.ok) {
@@ -56,11 +55,10 @@ export default function AdminTraining() {
 
   const startTraining = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch('/api/v1/ai/training/start', {
         method: 'POST',
+        credentials: 'include', // Include cookies
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(newTraining)
@@ -84,10 +82,9 @@ export default function AdminTraining() {
     if (!confirm('Are you sure you want to stop this training job?')) return
 
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`/api/v1/ai/training/jobs/${jobId}/stop`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include' // Include cookies
       })
 
       if (response.ok) {

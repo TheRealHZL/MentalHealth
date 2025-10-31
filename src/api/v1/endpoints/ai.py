@@ -4,33 +4,28 @@ AI Endpoints for MindBridge Custom AI
 Alle AI-bezogenen API-Endpunkte für unsere eigene KI-Implementation.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field
-from datetime import datetime
-import logging
 import base64
+import logging
 import uuid
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from src.core.security import get_current_user_id_optional, get_current_user_id
-from src.core.rate_limiting import (
-    limiter,
-    AI_CHAT_LIMIT,
-    AI_MOOD_ANALYSIS_LIMIT,
-    GENERAL_API_LIMIT
-)
-from src.schemas.ai import (
-    EmotionPredictionRequest, EmotionPredictionResponse,
-    MoodPredictionRequest, MoodPredictionResponse,
-    ChatRequest, ChatResponse,
-    SentimentAnalysisRequest, SentimentAnalysisResponse,
-    AIStatusResponse
-)
-from src.services.encryption_service import EncryptionService
-from src.models.encrypted_models import EncryptedChatMessage
-from src.core.database import get_async_session
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+
+from src.core.database import get_async_session
+from src.core.rate_limiting import (AI_CHAT_LIMIT, AI_MOOD_ANALYSIS_LIMIT,
+                                    GENERAL_API_LIMIT, limiter)
+from src.core.security import get_current_user_id, get_current_user_id_optional
+from src.models.encrypted_models import EncryptedChatMessage
+from src.schemas.ai import (AIStatusResponse, ChatRequest, ChatResponse,
+                            EmotionPredictionRequest,
+                            EmotionPredictionResponse, MoodPredictionRequest,
+                            MoodPredictionResponse, SentimentAnalysisRequest,
+                            SentimentAnalysisResponse)
+from src.services.encryption_service import EncryptionService
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +36,10 @@ router = APIRouter()
 # Encrypted Chat Message Models
 # ========================================
 
+
 class EncryptedChatPayload(BaseModel):
     """Encrypted chat message payload from client"""
+
     ciphertext: str = Field(description="Base64-encoded encrypted data")
     nonce: str = Field(description="Base64-encoded nonce (12 bytes)")
     version: int = Field(default=1, description="Encryption version")
@@ -50,13 +47,17 @@ class EncryptedChatPayload(BaseModel):
 
 class EncryptedChatMessageCreate(BaseModel):
     """Create encrypted chat message"""
+
     encrypted_data: EncryptedChatPayload = Field(description="Encrypted chat data")
-    session_id: Optional[str] = Field(None, description="Optional session ID for grouping")
+    session_id: Optional[str] = Field(
+        None, description="Optional session ID for grouping"
+    )
     message_type: str = Field(default="chat", description="Message type")
 
 
 class EncryptedChatMessageResponse(BaseModel):
     """Encrypted chat message response"""
+
     id: str = Field(description="Message ID")
     user_id: str = Field(description="User ID")
     session_id: Optional[str] = Field(None, description="Session ID")
@@ -70,113 +71,113 @@ class EncryptedChatMessageResponse(BaseModel):
 # Original AI Endpoints (Unencrypted)
 # ========================================
 
+
 @router.get("/status", response_model=AIStatusResponse)
 async def get_ai_status(request: Request) -> Dict[str, Any]:
     """
     Get AI Engine Status
-    
+
     Returns status of all AI models and performance metrics.
     """
     try:
         ai_engine = request.app.state.ai_engine
-        
+
         if not ai_engine:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not available"
+                detail="AI Engine not available",
             )
-        
+
         status_info = await ai_engine.get_status()
-        
+
         return {
             "success": True,
             "data": status_info,
-            "timestamp": status_info.get("timestamp")
+            "timestamp": status_info.get("timestamp"),
         }
-        
+
     except Exception as e:
         logger.error(f"AI status check failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get AI status"
+            detail="Failed to get AI status",
         )
+
 
 @router.post("/emotion/predict", response_model=EmotionPredictionResponse)
 @limiter.limit(AI_MOOD_ANALYSIS_LIMIT)  # 30 emotion predictions per minute
 async def predict_emotion(
     req: Request,
     request: ChatRequest,  # Reuse chat request structure
-    user_id: Optional[str] = Depends(get_current_user_id_optional)
+    user_id: Optional[str] = Depends(get_current_user_id_optional),
 ) -> Dict[str, Any]:
     """
     Predict Emotion from Text
-    
+
     Analyzes text and returns detected emotion with confidence scores.
     """
     try:
         ai_engine = req.app.state.ai_engine
-        
+
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models.",
             )
-        
+
         # Predict emotion
         result = await ai_engine.predict_emotion(
-            text=request.message,
-            context=request.context
+            text=request.message, context=request.context
         )
-        
+
         return {
             "success": True,
             "data": {
                 "emotion": result["emotion"],
                 "confidence": result["confidence"],
                 "probabilities": result.get("probabilities", {}),
-                "latency_ms": result.get("latency_ms", 0)
+                "latency_ms": result.get("latency_ms", 0),
             },
             "user_id": user_id,
-            "timestamp": None  # Will be set by response model
+            "timestamp": None,  # Will be set by response model
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Emotion prediction failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Emotion prediction failed"
+            detail="Emotion prediction failed",
         )
+
 
 @router.post("/mood/predict", response_model=MoodPredictionResponse)
 @limiter.limit(AI_MOOD_ANALYSIS_LIMIT)  # 30 mood predictions per minute
 async def predict_mood(
     req: Request,
     request: MoodPredictionRequest,
-    user_id: Optional[str] = Depends(get_current_user_id_optional)
+    user_id: Optional[str] = Depends(get_current_user_id_optional),
 ) -> Dict[str, Any]:
     """
     Predict Mood Score
-    
+
     Analyzes text and optional metadata to predict mood on 1-10 scale.
     """
     try:
         ai_engine = req.app.state.ai_engine
-        
+
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models.",
             )
-        
+
         # Predict mood
         result = await ai_engine.predict_mood(
-            text=request.text,
-            history=request.history,
-            metadata=request.metadata
+            text=request.text, history=request.history, metadata=request.metadata
         )
-        
+
         return {
             "success": True,
             "data": {
@@ -184,49 +185,50 @@ async def predict_mood(
                 "confidence": result["confidence"],
                 "trend": result["trend"],
                 "scale_info": result.get("scale", "1-10 scale"),
-                "latency_ms": result.get("latency_ms", 0)
+                "latency_ms": result.get("latency_ms", 0),
             },
             "user_id": user_id,
-            "timestamp": None
+            "timestamp": None,
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Mood prediction failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Mood prediction failed"
+            detail="Mood prediction failed",
         )
+
 
 @router.post("/chat", response_model=ChatResponse)
 @limiter.limit(AI_CHAT_LIMIT)  # 20 AI chat requests per minute
 async def chat_with_ai(
     req: Request,
     request: ChatRequest,
-    user_id: Optional[str] = Depends(get_current_user_id_optional)
+    user_id: Optional[str] = Depends(get_current_user_id_optional),
 ) -> Dict[str, Any]:
     """
     Chat with AI Assistant
-    
+
     Generates empathetic response using custom chat model.
     """
     try:
         ai_engine = req.app.state.ai_engine
-        
+
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models.",
             )
-        
+
         # Generate chat response
         result = await ai_engine.generate_chat_response(
             user_message=request.message,
             conversation_history=request.conversation_history,
-            user_context=request.context
+            user_context=request.context,
         )
-        
+
         return {
             "success": True,
             "data": {
@@ -234,44 +236,45 @@ async def chat_with_ai(
                 "confidence": result["confidence"],
                 "safety_checked": result.get("safety_checked", True),
                 "empathy_score": result.get("empathy_score"),
-                "latency_ms": result.get("latency_ms", 0)
+                "latency_ms": result.get("latency_ms", 0),
             },
             "user_id": user_id,
-            "timestamp": None
+            "timestamp": None,
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Chat generation failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Chat generation failed"
+            detail="Chat generation failed",
         )
+
 
 @router.post("/sentiment/analyze", response_model=SentimentAnalysisResponse)
 async def analyze_sentiment(
     request: SentimentAnalysisRequest,
     req: Request,
-    user_id: Optional[str] = Depends(get_current_user_id_optional)
+    user_id: Optional[str] = Depends(get_current_user_id_optional),
 ) -> Dict[str, Any]:
     """
     Analyze Text Sentiment
-    
+
     Fast sentiment analysis using custom CNN model.
     """
     try:
         ai_engine = req.app.state.ai_engine
-        
+
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models.",
             )
-        
+
         # Analyze sentiment
         result = await ai_engine.analyze_sentiment(request.text)
-        
+
         return {
             "success": True,
             "data": {
@@ -279,52 +282,55 @@ async def analyze_sentiment(
                 "confidence": result["confidence"],
                 "score": result["score"],
                 "intensity": result.get("intensity"),
-                "latency_ms": result.get("latency_ms", 0)
+                "latency_ms": result.get("latency_ms", 0),
             },
             "user_id": user_id,
-            "timestamp": None
+            "timestamp": None,
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Sentiment analysis failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Sentiment analysis failed"
+            detail="Sentiment analysis failed",
         )
+
 
 @router.post("/analyze/comprehensive")
 async def comprehensive_analysis(
     request: ChatRequest,
     req: Request,
-    user_id: Optional[str] = Depends(get_current_user_id_optional)
+    user_id: Optional[str] = Depends(get_current_user_id_optional),
 ) -> Dict[str, Any]:
     """
     Comprehensive AI Analysis
-    
+
     Runs all AI models on the input text for complete analysis.
     """
     try:
         ai_engine = req.app.state.ai_engine
-        
+
         if not ai_engine or not ai_engine.is_ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models."
+                detail="AI Engine not ready. Models need to be trained first. Please use /api/v1/ai/training/start endpoint to train models.",
             )
-        
+
         # Run all analyses in parallel
         import asyncio
-        
+
         emotion_task = ai_engine.predict_emotion(request.message, request.context)
-        mood_task = ai_engine.predict_mood(request.message, request.conversation_history)
+        mood_task = ai_engine.predict_mood(
+            request.message, request.conversation_history
+        )
         sentiment_task = ai_engine.analyze_sentiment(request.message)
-        
+
         emotion_result, mood_result, sentiment_result = await asyncio.gather(
             emotion_task, mood_task, sentiment_task
         )
-        
+
         # Generate response based on analysis
         chat_result = await ai_engine.generate_chat_response(
             user_message=request.message,
@@ -333,10 +339,10 @@ async def comprehensive_analysis(
                 **request.context,
                 "emotion": emotion_result["emotion"],
                 "mood_score": mood_result["mood_score"],
-                "sentiment": sentiment_result["sentiment"]
-            }
+                "sentiment": sentiment_result["sentiment"],
+            },
         )
-        
+
         return {
             "success": True,
             "data": {
@@ -349,89 +355,93 @@ async def comprehensive_analysis(
                     "dominant_emotion": emotion_result["emotion"],
                     "mood_level": mood_result["mood_score"],
                     "confidence_average": (
-                        emotion_result["confidence"] + 
-                        mood_result["confidence"] + 
-                        sentiment_result["confidence"]
-                    ) / 3
-                }
+                        emotion_result["confidence"]
+                        + mood_result["confidence"]
+                        + sentiment_result["confidence"]
+                    )
+                    / 3,
+                },
             },
             "user_id": user_id,
-            "analysis_timestamp": None
+            "analysis_timestamp": None,
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Comprehensive analysis failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Comprehensive analysis failed"
+            detail="Comprehensive analysis failed",
         )
+
 
 @router.get("/models/info")
 async def get_models_info(
-    req: Request,
-    user_id: Optional[str] = Depends(get_current_user_id_optional)
+    req: Request, user_id: Optional[str] = Depends(get_current_user_id_optional)
 ) -> Dict[str, Any]:
     """
     Get AI Models Information
-    
+
     Returns detailed information about all loaded AI models.
     """
     try:
         ai_engine = req.app.state.ai_engine
-        
+
         if not ai_engine:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI Engine not available"
+                detail="AI Engine not available",
             )
-        
+
         models_info = {}
-        
+
         # Get info for each model
         for model_name, model in ai_engine.models.items():
-            if hasattr(model, 'get_model_info'):
+            if hasattr(model, "get_model_info"):
                 models_info[model_name] = model.get_model_info()
-        
+
         # Add tokenizer info
-        if ai_engine.tokenizer and hasattr(ai_engine.tokenizer, 'get_vocab_info'):
-            models_info['tokenizer'] = ai_engine.tokenizer.get_vocab_info()
-        
+        if ai_engine.tokenizer and hasattr(ai_engine.tokenizer, "get_vocab_info"):
+            models_info["tokenizer"] = ai_engine.tokenizer.get_vocab_info()
+
         return {
             "success": True,
             "data": {
                 "models": models_info,
                 "total_models": len(ai_engine.models),
                 "engine_status": ai_engine.is_ready(),
-                "device": str(ai_engine.device) if hasattr(ai_engine, 'device') else "unknown"
-            }
+                "device": (
+                    str(ai_engine.device) if hasattr(ai_engine, "device") else "unknown"
+                ),
+            },
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to get models info: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get models information"
+            detail="Failed to get models information",
         )
+
 
 @router.post("/feedback/model")
 async def submit_model_feedback(
     feedback_data: Dict[str, Any],
     req: Request,
-    user_id: str = Depends(get_current_user_id_optional)
+    user_id: str = Depends(get_current_user_id_optional),
 ) -> Dict[str, Any]:
     """
     Submit Feedback for AI Models
-    
+
     Allows users to provide feedback on AI predictions for model improvement.
     """
     try:
         # Store feedback for future model training
         # This would typically go to a database
-        
+
         feedback_entry = {
             "user_id": user_id,
             "model_type": feedback_data.get("model_type"),
@@ -440,16 +450,18 @@ async def submit_model_feedback(
             "user_feedback": feedback_data.get("user_feedback"),
             "correct_label": feedback_data.get("correct_label"),
             "feedback_score": feedback_data.get("feedback_score"),  # 1-5 rating
-            "timestamp": None  # Will be set by database
+            "timestamp": None,  # Will be set by database
         }
-        
+
         # Feedback storage implementation
         # In production, this would save to a feedback database table
         # For now, log the feedback for monitoring and future model improvement
         logger.info(f"🔬 AI Feedback received from user {user_id}")
-        logger.info(f"🔬 Model: {feedback_data.get('model_name')}, "
-                   f"Prediction: {feedback_data.get('model_prediction')}, "
-                   f"Score: {feedback_data.get('feedback_score')}")
+        logger.info(
+            f"🔬 Model: {feedback_data.get('model_name')}, "
+            f"Prediction: {feedback_data.get('model_prediction')}, "
+            f"Score: {feedback_data.get('feedback_score')}"
+        )
 
         # Future enhancement: Save to database for model retraining
         # Example implementation:
@@ -459,21 +471,21 @@ async def submit_model_feedback(
         #     user_id=user_id,
         #     feedback_data=feedback_record
         # )
-        
+
         return {
             "success": True,
             "message": "Feedback received successfully",
             "data": {
                 "feedback_id": "temp_id",  # Would be actual ID from database
-                "status": "processed"
-            }
+                "status": "processed",
+            },
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to submit model feedback: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to submit feedback"
+            detail="Failed to submit feedback",
         )
 
 
@@ -481,11 +493,12 @@ async def submit_model_feedback(
 # Encrypted Chat Message Endpoints (Zero-Knowledge)
 # ========================================
 
+
 @router.post("/chat/encrypted", response_model=EncryptedChatMessageResponse)
 async def create_encrypted_chat_message(
     chat_data: EncryptedChatMessageCreate,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """
     Store Encrypted Chat Message (Zero-Knowledge)
@@ -504,14 +517,14 @@ async def create_encrypted_chat_message(
         payload_dict = {
             "ciphertext": chat_data.encrypted_data.ciphertext,
             "nonce": chat_data.encrypted_data.nonce,
-            "version": chat_data.encrypted_data.version
+            "version": chat_data.encrypted_data.version,
         }
 
         is_valid, error_msg = EncryptionService.validate_encrypted_payload(payload_dict)
         if not is_valid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid encrypted payload: {error_msg}"
+                detail=f"Invalid encrypted payload: {error_msg}",
             )
 
         # Decode base64 to binary for storage
@@ -522,11 +535,12 @@ async def create_encrypted_chat_message(
         encrypted_data = ciphertext_bytes + nonce_bytes
 
         # Validate size
-        is_size_valid, size_error = EncryptionService.validate_encrypted_data_size(encrypted_data)
+        is_size_valid, size_error = EncryptionService.validate_encrypted_data_size(
+            encrypted_data
+        )
         if not is_size_valid:
             raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=size_error
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=size_error
             )
 
         # Parse session_id if provided
@@ -537,7 +551,7 @@ async def create_encrypted_chat_message(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid session_id format"
+                    detail="Invalid session_id format",
                 )
 
         # Create encrypted chat message
@@ -548,7 +562,7 @@ async def create_encrypted_chat_message(
             encrypted_data=encrypted_data,
             message_type=chat_data.message_type,
             encryption_version=chat_data.encrypted_data.version,
-            is_deleted=False
+            is_deleted=False,
         )
 
         db.add(message)
@@ -566,13 +580,13 @@ async def create_encrypted_chat_message(
             "user_id": str(message.user_id),
             "session_id": str(message.session_id) if message.session_id else None,
             "encrypted_data": {
-                "ciphertext": base64.b64encode(stored_ciphertext).decode('utf-8'),
-                "nonce": base64.b64encode(stored_nonce).decode('utf-8'),
-                "version": message.encryption_version
+                "ciphertext": base64.b64encode(stored_ciphertext).decode("utf-8"),
+                "nonce": base64.b64encode(stored_nonce).decode("utf-8"),
+                "version": message.encryption_version,
             },
             "message_type": message.message_type,
             "created_at": message.created_at,
-            "encryption_version": message.encryption_version
+            "encryption_version": message.encryption_version,
         }
 
     except HTTPException:
@@ -581,7 +595,7 @@ async def create_encrypted_chat_message(
         logger.error(f"Failed to create encrypted chat message: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Verschlüsselte Chat-Nachricht konnte nicht erstellt werden"
+            detail="Verschlüsselte Chat-Nachricht konnte nicht erstellt werden",
         )
 
 
@@ -591,7 +605,7 @@ async def get_encrypted_chat_messages(
     limit: int = 50,
     offset: int = 0,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ) -> List[Dict[str, Any]]:
     """
     Get Encrypted Chat Messages (Zero-Knowledge)
@@ -604,7 +618,7 @@ async def get_encrypted_chat_messages(
         query = select(EncryptedChatMessage).where(
             and_(
                 EncryptedChatMessage.user_id == uuid.UUID(user_id),
-                EncryptedChatMessage.is_deleted == False
+                EncryptedChatMessage.is_deleted == False,
             )
         )
 
@@ -616,13 +630,12 @@ async def get_encrypted_chat_messages(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid session_id format"
+                    detail="Invalid session_id format",
                 )
 
         # Execute query
         result = await db.execute(
-            query
-            .order_by(EncryptedChatMessage.created_at.desc())
+            query.order_by(EncryptedChatMessage.created_at.desc())
             .limit(limit)
             .offset(offset)
         )
@@ -636,19 +649,25 @@ async def get_encrypted_chat_messages(
             stored_ciphertext = message.encrypted_data[:-12]
             stored_nonce = message.encrypted_data[-12:]
 
-            response.append({
-                "id": str(message.id),
-                "user_id": str(message.user_id),
-                "session_id": str(message.session_id) if message.session_id else None,
-                "encrypted_data": {
-                    "ciphertext": base64.b64encode(stored_ciphertext).decode('utf-8'),
-                    "nonce": base64.b64encode(stored_nonce).decode('utf-8'),
-                    "version": message.encryption_version
-                },
-                "message_type": message.message_type,
-                "created_at": message.created_at,
-                "encryption_version": message.encryption_version
-            })
+            response.append(
+                {
+                    "id": str(message.id),
+                    "user_id": str(message.user_id),
+                    "session_id": (
+                        str(message.session_id) if message.session_id else None
+                    ),
+                    "encrypted_data": {
+                        "ciphertext": base64.b64encode(stored_ciphertext).decode(
+                            "utf-8"
+                        ),
+                        "nonce": base64.b64encode(stored_nonce).decode("utf-8"),
+                        "version": message.encryption_version,
+                    },
+                    "message_type": message.message_type,
+                    "created_at": message.created_at,
+                    "encryption_version": message.encryption_version,
+                }
+            )
 
         return response
 
@@ -658,7 +677,7 @@ async def get_encrypted_chat_messages(
         logger.error(f"Failed to get encrypted chat messages: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Verschlüsselte Chat-Nachrichten konnten nicht geladen werden"
+            detail="Verschlüsselte Chat-Nachrichten konnten nicht geladen werden",
         )
 
 
@@ -666,7 +685,7 @@ async def get_encrypted_chat_messages(
 async def delete_encrypted_chat_message(
     message_id: str,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """
     Delete Encrypted Chat Message (Soft Delete)
@@ -675,12 +694,11 @@ async def delete_encrypted_chat_message(
     """
     try:
         result = await db.execute(
-            select(EncryptedChatMessage)
-            .where(
+            select(EncryptedChatMessage).where(
                 and_(
                     EncryptedChatMessage.id == uuid.UUID(message_id),
                     EncryptedChatMessage.user_id == uuid.UUID(user_id),
-                    EncryptedChatMessage.is_deleted == False
+                    EncryptedChatMessage.is_deleted == False,
                 )
             )
         )
@@ -690,7 +708,7 @@ async def delete_encrypted_chat_message(
         if not message:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Verschlüsselte Chat-Nachricht nicht gefunden"
+                detail="Verschlüsselte Chat-Nachricht nicht gefunden",
             )
 
         # Soft delete
@@ -703,7 +721,7 @@ async def delete_encrypted_chat_message(
 
         return {
             "success": True,
-            "message": "Verschlüsselte Chat-Nachricht erfolgreich gelöscht"
+            "message": "Verschlüsselte Chat-Nachricht erfolgreich gelöscht",
         }
 
     except HTTPException:
@@ -712,7 +730,7 @@ async def delete_encrypted_chat_message(
         logger.error(f"Failed to delete encrypted chat message: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Verschlüsselte Chat-Nachricht konnte nicht gelöscht werden"
+            detail="Verschlüsselte Chat-Nachricht konnte nicht gelöscht werden",
         )
 
 
@@ -720,7 +738,7 @@ async def delete_encrypted_chat_message(
 async def delete_encrypted_session(
     session_id: str,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """
     Delete All Messages in Encrypted Session (Soft Delete)
@@ -734,17 +752,16 @@ async def delete_encrypted_session(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid session_id format"
+                detail="Invalid session_id format",
             )
 
         # Get all messages in session
         result = await db.execute(
-            select(EncryptedChatMessage)
-            .where(
+            select(EncryptedChatMessage).where(
                 and_(
                     EncryptedChatMessage.session_id == session_uuid,
                     EncryptedChatMessage.user_id == uuid.UUID(user_id),
-                    EncryptedChatMessage.is_deleted == False
+                    EncryptedChatMessage.is_deleted == False,
                 )
             )
         )
@@ -754,7 +771,7 @@ async def delete_encrypted_session(
         if not messages:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Keine Nachrichten in dieser Session gefunden"
+                detail="Keine Nachrichten in dieser Session gefunden",
             )
 
         # Soft delete all messages
@@ -766,12 +783,14 @@ async def delete_encrypted_session(
 
         await db.commit()
 
-        logger.info(f"Encrypted session deleted: {session_id} ({deleted_count} messages)")
+        logger.info(
+            f"Encrypted session deleted: {session_id} ({deleted_count} messages)"
+        )
 
         return {
             "success": True,
             "message": f"{deleted_count} verschlüsselte Nachrichten erfolgreich gelöscht",
-            "deleted_count": deleted_count
+            "deleted_count": deleted_count,
         }
 
     except HTTPException:
@@ -780,5 +799,5 @@ async def delete_encrypted_session(
         logger.error(f"Failed to delete encrypted session: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Verschlüsselte Session konnte nicht gelöscht werden"
+            detail="Verschlüsselte Session konnte nicht gelöscht werden",
         )

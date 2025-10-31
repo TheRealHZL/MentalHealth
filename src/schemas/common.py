@@ -4,13 +4,15 @@ Common Response Schemas
 Gemeinsame Response Schemas für alle Module.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class SuccessResponse(BaseModel):
     """Generic success response"""
+
     success: bool = True
     message: str
     data: Optional[Dict[str, Any]] = None
@@ -18,6 +20,7 @@ class SuccessResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Generic error response"""
+
     success: bool = False
     error: str
     details: Optional[Dict[str, Any]] = None
@@ -26,6 +29,7 @@ class ErrorResponse(BaseModel):
 
 class PaginationParams(BaseModel):
     """Pagination parameters"""
+
     page: int = Field(1, ge=1, description="Page number")
     page_size: int = Field(20, ge=1, le=100, description="Items per page")
     sort_by: str = Field("created_at", description="Sort by field")
@@ -34,6 +38,7 @@ class PaginationParams(BaseModel):
 
 class PaginatedResponse(BaseModel):
     """Paginated response"""
+
     items: List[Dict[str, Any]]
     total: int
     page: int

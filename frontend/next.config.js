@@ -3,9 +3,6 @@ const nextConfig = {
   // Enable standalone output for Docker
   output: 'standalone',
 
-  // Disable telemetry
-  telemetry: false,
-
   // API configuration
   async rewrites() {
     return [
@@ -49,14 +46,16 @@ const nextConfig = {
 
   // Optimize images
   images: {
-    domains: [],
+    remotePatterns: [],
     formats: ['image/avif', 'image/webp'],
   },
 
   // Production optimizations
-  swcMinify: true,
   poweredByHeader: false,
   compress: true,
+
+  // React strict mode for development
+  reactStrictMode: true,
 }
 
 module.exports = nextConfig

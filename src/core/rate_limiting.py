@@ -12,18 +12,19 @@ Uses slowapi for rate limiting with Redis backend for distributed rate limiting.
 
 import json
 from typing import Optional
+
 from fastapi import Request, Response
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from src.core.config import settings
-
 
 # ============================================================================
 # Rate Limiter Initialization
 # ============================================================================
+
 
 def get_client_identifier(request: Request) -> str:
     """
@@ -66,27 +67,32 @@ limiter = Limiter(
 # Rate Limit Exceeded Handler
 # ============================================================================
 
-async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> Response:
+
+async def rate_limit_exceeded_handler(
+    request: Request, exc: RateLimitExceeded
+) -> Response:
     """
     Custom handler for rate limit exceeded errors
 
     Returns 429 Too Many Requests with retry-after header
     """
     return Response(
-        content=json.dumps({
-            "error": "rate_limit_exceeded",
-            "message": "Too many requests. Please try again later.",
-            "detail": str(exc.detail),
-            "retry_after_seconds": getattr(exc, "retry_after", 60)
-        }),
+        content=json.dumps(
+            {
+                "error": "rate_limit_exceeded",
+                "message": "Too many requests. Please try again later.",
+                "detail": str(exc.detail),
+                "retry_after_seconds": getattr(exc, "retry_after", 60),
+            }
+        ),
         status_code=429,
         media_type="application/json",
         headers={
             "Retry-After": str(getattr(exc, "retry_after", 60)),
             "X-RateLimit-Limit": str(getattr(exc, "limit", "unknown")),
             "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": str(getattr(exc, "reset", "unknown"))
-        }
+            "X-RateLimit-Reset": str(getattr(exc, "reset", "unknown")),
+        },
     )
 
 
@@ -97,7 +103,9 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
 # Authentication Endpoints (Strict limits to prevent brute force)
 AUTH_LOGIN_LIMIT = "10/minute"  # 10 login attempts per minute
 AUTH_REGISTER_PATIENT_LIMIT = "5/hour"  # 5 patient registrations per hour
-AUTH_REGISTER_THERAPIST_LIMIT = "3/hour"  # 3 therapist registrations per hour (more restricted)
+AUTH_REGISTER_THERAPIST_LIMIT = (
+    "3/hour"  # 3 therapist registrations per hour (more restricted)
+)
 AUTH_PASSWORD_RESET_LIMIT = "3/hour"  # 3 password reset requests per hour
 AUTH_REFRESH_TOKEN_LIMIT = "20/hour"  # 20 token refreshes per hour
 
@@ -127,69 +135,51 @@ RATE_LIMIT_INFO = {
     "authentication": {
         "login": {
             "limit": AUTH_LOGIN_LIMIT,
-            "reason": "Prevent brute force password attacks"
+            "reason": "Prevent brute force password attacks",
         },
         "register_patient": {
             "limit": AUTH_REGISTER_PATIENT_LIMIT,
-            "reason": "Prevent mass account creation"
+            "reason": "Prevent mass account creation",
         },
         "register_therapist": {
             "limit": AUTH_REGISTER_THERAPIST_LIMIT,
-            "reason": "Prevent unauthorized therapist account creation"
+            "reason": "Prevent unauthorized therapist account creation",
         },
         "password_reset": {
             "limit": AUTH_PASSWORD_RESET_LIMIT,
-            "reason": "Prevent account enumeration"
+            "reason": "Prevent account enumeration",
         },
         "refresh_token": {
             "limit": AUTH_REFRESH_TOKEN_LIMIT,
-            "reason": "Prevent token refresh abuse"
-        }
+            "reason": "Prevent token refresh abuse",
+        },
     },
     "ai": {
         "chat": {
             "limit": AI_CHAT_LIMIT,
-            "reason": "Prevent AI API abuse and excessive costs"
+            "reason": "Prevent AI API abuse and excessive costs",
         },
         "mood_analysis": {
             "limit": AI_MOOD_ANALYSIS_LIMIT,
-            "reason": "Prevent AI API abuse"
+            "reason": "Prevent AI API abuse",
         },
         "dream_interpretation": {
             "limit": AI_DREAM_INTERPRETATION_LIMIT,
-            "reason": "Prevent AI API abuse (complex analysis)"
-        }
+            "reason": "Prevent AI API abuse (complex analysis)",
+        },
     },
     "crud": {
-        "create": {
-            "limit": CRUD_CREATE_LIMIT,
-            "reason": "Prevent spam data creation"
-        },
-        "read": {
-            "limit": CRUD_READ_LIMIT,
-            "reason": "Prevent data scraping"
-        },
-        "update": {
-            "limit": CRUD_UPDATE_LIMIT,
-            "reason": "Prevent spam updates"
-        },
-        "delete": {
-            "limit": CRUD_DELETE_LIMIT,
-            "reason": "Prevent mass data deletion"
-        }
+        "create": {"limit": CRUD_CREATE_LIMIT, "reason": "Prevent spam data creation"},
+        "read": {"limit": CRUD_READ_LIMIT, "reason": "Prevent data scraping"},
+        "update": {"limit": CRUD_UPDATE_LIMIT, "reason": "Prevent spam updates"},
+        "delete": {"limit": CRUD_DELETE_LIMIT, "reason": "Prevent mass data deletion"},
     },
     "analytics": {
-        "general": {
-            "limit": ANALYTICS_LIMIT,
-            "reason": "Prevent analytics API abuse"
-        }
+        "general": {"limit": ANALYTICS_LIMIT, "reason": "Prevent analytics API abuse"}
     },
     "general": {
-        "api": {
-            "limit": GENERAL_API_LIMIT,
-            "reason": "General API rate limit"
-        }
-    }
+        "api": {"limit": GENERAL_API_LIMIT, "reason": "General API rate limit"}
+    },
 }
 
 
@@ -245,6 +235,7 @@ def is_exempt_from_rate_limiting(request: Request) -> bool:
 # Monitoring & Metrics
 # ============================================================================
 
+
 class RateLimitMonitor:
     """
     Monitor rate limit violations for security analysis
@@ -254,11 +245,7 @@ class RateLimitMonitor:
         self.violations = []
 
     def record_violation(
-        self,
-        client_id: str,
-        endpoint: str,
-        limit: str,
-        timestamp: str
+        self, client_id: str, endpoint: str, limit: str, timestamp: str
     ):
         """
         Record a rate limit violation
@@ -269,12 +256,14 @@ class RateLimitMonitor:
             limit: Rate limit that was exceeded
             timestamp: When the violation occurred
         """
-        self.violations.append({
-            "client_id": client_id,
-            "endpoint": endpoint,
-            "limit": limit,
-            "timestamp": timestamp
-        })
+        self.violations.append(
+            {
+                "client_id": client_id,
+                "endpoint": endpoint,
+                "limit": limit,
+                "timestamp": timestamp,
+            }
+        )
 
         # Keep only last 1000 violations in memory
         if len(self.violations) > 1000:

@@ -5,16 +5,17 @@ These endpoints help users set up and manage client-side encryption.
 The server NEVER decrypts user data - all encryption happens in the browser.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
 import base64
+from typing import Any, Dict, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
+from src.core.logging import get_logger
 from src.core.security import get_current_user_id
 from src.services.encryption_service import EncryptionService
-from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -25,28 +26,34 @@ router = APIRouter(prefix="/encryption", tags=["encryption"])
 # Request/Response Models
 # ========================================
 
+
 class EncryptionSetupRequest(BaseModel):
     """Request to set up encryption for a user"""
+
     iterations: Optional[int] = Field(
         default=600000,
         ge=100000,  # OWASP minimum
         le=1000000,  # Reasonable maximum
-        description="Number of PBKDF2 iterations"
+        description="Number of PBKDF2 iterations",
     )
 
 
 class EncryptionParamsResponse(BaseModel):
     """Response with encryption parameters"""
+
     salt: str = Field(description="Base64-encoded salt for PBKDF2")
     iterations: int = Field(description="Number of PBKDF2 iterations")
     algorithm: str = Field(description="Key derivation algorithm")
     version: int = Field(description="Encryption version")
     has_recovery_key: bool = Field(description="Whether user has set up recovery key")
-    estimated_derivation_time: float = Field(description="Estimated time to derive key (seconds)")
+    estimated_derivation_time: float = Field(
+        description="Estimated time to derive key (seconds)"
+    )
 
 
 class ValidatePayloadRequest(BaseModel):
     """Request to validate an encrypted payload"""
+
     ciphertext: str = Field(description="Base64-encoded ciphertext")
     nonce: str = Field(description="Base64-encoded nonce (12 bytes for AES-GCM)")
     version: int = Field(description="Encryption version", default=1)
@@ -54,17 +61,20 @@ class ValidatePayloadRequest(BaseModel):
 
 class ValidatePayloadResponse(BaseModel):
     """Response from payload validation"""
+
     valid: bool = Field(description="Whether payload is valid")
     error: Optional[str] = Field(description="Error message if invalid", default=None)
 
 
 class PasswordStrengthRequest(BaseModel):
     """Request to validate password strength"""
+
     password: str = Field(description="Password to validate")
 
 
 class PasswordStrengthResponse(BaseModel):
     """Response from password strength validation"""
+
     valid: bool = Field(description="Whether password is strong enough")
     error: Optional[str] = Field(description="Error message if weak", default=None)
     strength_score: int = Field(description="Strength score (0-100)", ge=0, le=100)
@@ -72,7 +82,10 @@ class PasswordStrengthResponse(BaseModel):
 
 class RecoveryKeyResponse(BaseModel):
     """Response with recovery key"""
-    recovery_key: str = Field(description="Base64-encoded recovery key - SAVE THIS SECURELY!")
+
+    recovery_key: str = Field(
+        description="Base64-encoded recovery key - SAVE THIS SECURELY!"
+    )
     warning: str = Field(
         default="Store this recovery key in a secure location. You will need it to recover your account if you forget your password. This key will never be shown again!"
     )
@@ -82,11 +95,12 @@ class RecoveryKeyResponse(BaseModel):
 # Endpoints
 # ========================================
 
+
 @router.post("/setup", response_model=EncryptionParamsResponse)
 async def setup_encryption(
     request: EncryptionSetupRequest,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Set up client-side encryption for the current user.
@@ -99,9 +113,7 @@ async def setup_encryption(
     try:
         # Set up encryption for user
         encryption_key = await EncryptionService.setup_user_encryption(
-            db=db,
-            user_id=user_id,
-            iterations=request.iterations
+            db=db, user_id=user_id, iterations=request.iterations
         )
 
         # Calculate estimated derivation time
@@ -110,26 +122,25 @@ async def setup_encryption(
         )
 
         return EncryptionParamsResponse(
-            salt=base64.b64encode(encryption_key.key_salt).decode('utf-8'),
+            salt=base64.b64encode(encryption_key.key_salt).decode("utf-8"),
             iterations=encryption_key.key_iterations,
             algorithm=encryption_key.key_algorithm,
             version=encryption_key.current_key_version,
             has_recovery_key=encryption_key.has_recovery_key,
-            estimated_derivation_time=estimated_time
+            estimated_derivation_time=estimated_time,
         )
 
     except Exception as e:
         logger.error(f"Failed to set up encryption for user {user_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to set up encryption"
+            detail="Failed to set up encryption",
         )
 
 
 @router.get("/params", response_model=EncryptionParamsResponse)
 async def get_encryption_params(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
 ):
     """
     Get encryption parameters for the current user.
@@ -145,7 +156,7 @@ async def get_encryption_params(
         if not params:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Encryption not set up for this user. Please complete registration."
+                detail="Encryption not set up for this user. Please complete registration.",
             )
 
         # Calculate estimated derivation time
@@ -159,7 +170,7 @@ async def get_encryption_params(
             algorithm=params["algorithm"],
             version=params["version"],
             has_recovery_key=params["has_recovery_key"],
-            estimated_derivation_time=estimated_time
+            estimated_derivation_time=estimated_time,
         )
 
     except HTTPException:
@@ -168,14 +179,13 @@ async def get_encryption_params(
         logger.error(f"Failed to get encryption params for user {user_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve encryption parameters"
+            detail="Failed to retrieve encryption parameters",
         )
 
 
 @router.post("/validate-payload", response_model=ValidatePayloadResponse)
 async def validate_encrypted_payload(
-    request: ValidatePayloadRequest,
-    user_id: str = Depends(get_current_user_id)
+    request: ValidatePayloadRequest, user_id: str = Depends(get_current_user_id)
 ):
     """
     Validate that an encrypted payload has the correct structure.
@@ -191,10 +201,7 @@ async def validate_encrypted_payload(
     payload = request.dict()
     valid, error = EncryptionService.validate_encrypted_payload(payload)
 
-    return ValidatePayloadResponse(
-        valid=valid,
-        error=error
-    )
+    return ValidatePayloadResponse(valid=valid, error=error)
 
 
 @router.post("/validate-password", response_model=PasswordStrengthResponse)
@@ -228,9 +235,7 @@ async def validate_password_strength(request: PasswordStrengthRequest):
         score += 15
 
     return PasswordStrengthResponse(
-        valid=valid,
-        error=error,
-        strength_score=min(score, 100)
+        valid=valid, error=error, strength_score=min(score, 100)
     )
 
 
@@ -253,15 +258,12 @@ async def generate_recovery_key(user_id: str = Depends(get_current_user_id)):
     """
     recovery_key = EncryptionService.generate_recovery_key()
 
-    return RecoveryKeyResponse(
-        recovery_key=recovery_key
-    )
+    return RecoveryKeyResponse(recovery_key=recovery_key)
 
 
 @router.post("/rotate-key")
 async def rotate_encryption_key(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
 ):
     """
     Rotate encryption key (generate new salt and version).
@@ -275,14 +277,13 @@ async def rotate_encryption_key(
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Key rotation will be implemented in a future phase. "
-               "This is a complex operation that requires re-encrypting all user data."
+        "This is a complex operation that requires re-encrypting all user data.",
     )
 
 
 @router.get("/status")
 async def get_encryption_status(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
 ):
     """
     Get encryption status for the current user.
@@ -295,5 +296,5 @@ async def get_encryption_status(
         "encryption_enabled": params is not None,
         "ready": params is not None,
         "version": params.get("version") if params else None,
-        "has_recovery_key": params.get("has_recovery_key") if params else False
+        "has_recovery_key": params.get("has_recovery_key") if params else False,
     }

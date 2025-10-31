@@ -8,13 +8,14 @@ Usage:
     app.add_middleware(RLSMiddleware)
 """
 
-from typing import Optional, Callable
-from uuid import UUID
-from fastapi import Request, Response, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from starlette.middleware.base import BaseHTTPMiddleware
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
+from typing import Callable, Optional
+from uuid import UUID
+
+from fastapi import Depends, Request, Response
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.core.database import get_async_session
 from src.core.rls_middleware import set_user_context
@@ -132,6 +133,7 @@ class RLSMiddleware(BaseHTTPMiddleware):
 # FastAPI Dependencies for RLS-protected endpoints
 # ============================================================================
 
+
 async def get_current_user_id(request: Request) -> Optional[UUID]:
     """
     FastAPI dependency to get current user ID from request state
@@ -178,8 +180,7 @@ async def require_authentication(request: Request) -> UUID:
 
 
 async def get_rls_session(
-    request: Request,
-    session: AsyncSession = Depends(get_async_session)
+    request: Request, session: AsyncSession = Depends(get_async_session)
 ) -> AsyncSession:
     """
     FastAPI dependency that provides a database session with RLS context set
@@ -210,8 +211,7 @@ async def get_rls_session(
 
 
 async def get_admin_rls_session(
-    request: Request,
-    session: AsyncSession = Depends(get_async_session)
+    request: Request, session: AsyncSession = Depends(get_async_session)
 ) -> AsyncSession:
     """
     FastAPI dependency for admin sessions (bypasses RLS)
@@ -242,6 +242,7 @@ async def get_admin_rls_session(
 # ============================================================================
 # Utility Functions
 # ============================================================================
+
 
 def is_user_authenticated(request: Request) -> bool:
     """
@@ -330,11 +331,11 @@ result = await session.execute(select(MoodEntry))  # Same code!
 """
 
 __all__ = [
-    'RLSMiddleware',
-    'get_current_user_id',
-    'require_authentication',
-    'get_rls_session',
-    'get_admin_rls_session',
-    'is_user_authenticated',
-    'get_user_id_from_request',
+    "RLSMiddleware",
+    "get_current_user_id",
+    "require_authentication",
+    "get_rls_session",
+    "get_admin_rls_session",
+    "is_user_authenticated",
+    "get_user_id_from_request",
 ]
