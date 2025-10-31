@@ -34,7 +34,7 @@ class DataService:
     async def delete_user_account(self, user_id: str) -> Dict[str, Any]:
         """Completely delete user account and all associated data (GDPR compliant)"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
@@ -306,7 +306,7 @@ class DataService:
     async def export_user_data(self, user_id: str) -> Dict[str, Any]:
         """Export all user data for GDPR compliance"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
@@ -524,7 +524,7 @@ class DataService:
     async def _get_account_statistics(self, user_id: str) -> Dict[str, Any]:
         """Get comprehensive account statistics"""
 
-        from .profile_service import ProfileService
+        from src.services.user.profile_service import ProfileService
 
         profile_service = ProfileService(self.db)
 

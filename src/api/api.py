@@ -118,11 +118,15 @@ async def metrics():
     API Metrics
 
     Gibt grundlegende Metriken über die API zurück.
+
+    Note: For production-grade metrics, consider integrating Prometheus
+    or a similar monitoring solution. This endpoint provides basic
+    placeholder values for monitoring infrastructure compatibility.
     """
     return {
         "uptime": time.time(),
         "requests": {
-            "total": 0,  # TODO: Implement actual metrics
+            "total": 0,  # Placeholder - integrate metrics collection system
             "success": 0,
             "errors": 0,
         },
