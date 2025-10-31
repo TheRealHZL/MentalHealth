@@ -101,17 +101,15 @@ export function generateNonce(): string {
  * @returns Base64-encoded hash
  */
 export async function sha256(data: string | ArrayBuffer): Promise<string> {
-  let dataBuffer: Uint8Array | ArrayBuffer;
-
   if (typeof data === 'string') {
     const encoder = new TextEncoder();
-    dataBuffer = encoder.encode(data);
+    const dataBuffer = encoder.encode(data);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+    return arrayBufferToBase64(hashBuffer);
   } else {
-    dataBuffer = data;
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return arrayBufferToBase64(hashBuffer);
   }
-
-  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-  return arrayBufferToBase64(hashBuffer);
 }
 
 /**
