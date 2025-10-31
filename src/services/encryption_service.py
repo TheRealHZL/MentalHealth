@@ -15,6 +15,7 @@ The server NEVER sees plaintext user data!
 
 import base64
 import hashlib
+import logging
 import os
 import secrets
 from datetime import datetime
@@ -23,10 +24,9 @@ from typing import Any, Dict, Optional, Tuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.logging import get_logger
 from src.models.encrypted_models import UserEncryptionKey
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class EncryptionService:

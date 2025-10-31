@@ -6,18 +6,18 @@ The server NEVER decrypts user data - all encryption happens in the browser.
 """
 
 import base64
+import logging
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_db
-from src.core.logging import get_logger
+from src.core.database import get_async_session
 from src.core.security import get_current_user_id
 from src.services.encryption_service import EncryptionService
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/encryption", tags=["encryption"])
 
@@ -100,7 +100,7 @@ class RecoveryKeyResponse(BaseModel):
 async def setup_encryption(
     request: EncryptionSetupRequest,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Set up client-side encryption for the current user.
@@ -140,7 +140,7 @@ async def setup_encryption(
 
 @router.get("/params", response_model=EncryptionParamsResponse)
 async def get_encryption_params(
-    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
+    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_async_session)
 ):
     """
     Get encryption parameters for the current user.
@@ -263,7 +263,7 @@ async def generate_recovery_key(user_id: str = Depends(get_current_user_id)):
 
 @router.post("/rotate-key")
 async def rotate_encryption_key(
-    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
+    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_async_session)
 ):
     """
     Rotate encryption key (generate new salt and version).
@@ -283,7 +283,7 @@ async def rotate_encryption_key(
 
 @router.get("/status")
 async def get_encryption_status(
-    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
+    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_async_session)
 ):
     """
     Get encryption status for the current user.
