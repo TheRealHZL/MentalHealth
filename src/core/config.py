@@ -249,7 +249,10 @@ def validate_configuration(settings: Settings):
 settings = get_settings()
 
 # Validate configuration on import
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     validate_configuration(settings)
 except ValueError as e:
-    print(f"⚠️ Configuration warning: {e}")
+    logger.warning(f"Configuration warning: {e}")

@@ -138,7 +138,7 @@ class RegistrationService:
     async def check_email_available(self, email: str) -> bool:
         """Check if email is available for registration"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 

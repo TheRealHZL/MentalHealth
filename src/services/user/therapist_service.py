@@ -104,7 +104,7 @@ class TherapistService:
     ) -> Dict[str, Any]:
         """Get detailed therapist profile (role-based visibility)"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
@@ -212,7 +212,7 @@ class TherapistService:
     ) -> Dict[str, Any]:
         """Verify therapist account (admin function)"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
@@ -255,7 +255,7 @@ class TherapistService:
     ) -> Dict[str, Any]:
         """Reject therapist verification (admin function)"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
@@ -295,7 +295,7 @@ class TherapistService:
     async def notify_admin_for_verification(self, therapist_id: uuid.UUID) -> None:
         """Notify admin about new therapist registration"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 

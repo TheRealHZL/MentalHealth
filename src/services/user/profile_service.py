@@ -31,7 +31,7 @@ class ProfileService:
     ) -> User:
         """Update user profile"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
@@ -55,7 +55,7 @@ class ProfileService:
     async def update_password(self, user_id: str, new_password: str) -> None:
         """Update user password"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
@@ -71,7 +71,7 @@ class ProfileService:
     async def get_profile_statistics(self, user_id: str) -> Dict[str, Any]:
         """Get user profile statistics"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
@@ -135,7 +135,7 @@ class ProfileService:
         recent_mood_count = recent_mood_result.scalar()
 
         # Get user for days calculation
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
         user = await auth_service.get_user_by_id(user_id)
@@ -206,7 +206,7 @@ class ProfileService:
         )
         recent_accesses = recent_accesses_result.scalar()
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
         user = await auth_service.get_user_by_id(user_id)
@@ -305,7 +305,7 @@ class ProfileService:
     ) -> None:
         """Update user preferences"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
@@ -329,7 +329,7 @@ class ProfileService:
     async def get_profile_completion_status(self, user_id: str) -> Dict[str, Any]:
         """Get profile completion status and suggestions"""
 
-        from .auth_service import AuthService
+        from src.services.user.auth_service import AuthService
 
         auth_service = AuthService(self.db)
 
