@@ -20,6 +20,11 @@ import type {
   AIMoodAnalysis,
   AIChatRequest,
   AIChatResponse,
+  TherapyNote,
+  CreateTherapyNoteRequest,
+  TherapyTechnique,
+  TherapySession,
+  CreateTherapySessionRequest,
   PaginatedResponse
 } from '@/types';
 
@@ -208,6 +213,55 @@ class ApiClient {
 
   async chatWithAI(data: AIChatRequest): Promise<AIChatResponse> {
     const response = await this.client.post<AIChatResponse>('/ai/chat', data);
+    return response.data;
+  }
+
+  // Therapy Endpoints
+  async createTherapyNote(data: CreateTherapyNoteRequest): Promise<TherapyNote> {
+    const response = await this.client.post<TherapyNote>('/therapy/notes', data);
+    return response.data;
+  }
+
+  async getTherapyNotes(page: number = 1, size: number = 10): Promise<PaginatedResponse<TherapyNote>> {
+    const response = await this.client.get<PaginatedResponse<TherapyNote>>('/therapy/notes', {
+      params: { page, size }
+    });
+    return response.data;
+  }
+
+  async getTherapyNote(id: string): Promise<TherapyNote> {
+    const response = await this.client.get<TherapyNote>(`/therapy/notes/${id}`);
+    return response.data;
+  }
+
+  async updateTherapyNote(id: string, data: Partial<CreateTherapyNoteRequest>): Promise<TherapyNote> {
+    const response = await this.client.put<TherapyNote>(`/therapy/notes/${id}`, data);
+    return response.data;
+  }
+
+  async deleteTherapyNote(id: string): Promise<void> {
+    await this.client.delete(`/therapy/notes/${id}`);
+  }
+
+  async getTherapyTechniques(): Promise<TherapyTechnique[]> {
+    const response = await this.client.get<TherapyTechnique[]>('/therapy/techniques');
+    return response.data;
+  }
+
+  async createTherapySession(data: CreateTherapySessionRequest): Promise<TherapySession> {
+    const response = await this.client.post<TherapySession>('/therapy/sessions', data);
+    return response.data;
+  }
+
+  async getTherapySessions(page: number = 1, size: number = 10): Promise<PaginatedResponse<TherapySession>> {
+    const response = await this.client.get<PaginatedResponse<TherapySession>>('/therapy/sessions', {
+      params: { page, size }
+    });
+    return response.data;
+  }
+
+  async getTherapyProgress(): Promise<any> {
+    const response = await this.client.get('/therapy/progress');
     return response.data;
   }
 

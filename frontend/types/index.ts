@@ -251,3 +251,59 @@ export interface Dataset {
   size: number;
   created_at: string;
 }
+
+// Therapy Types
+export interface TherapyNote {
+  id: string;
+  title: string;
+  content: string;
+  technique?: string;
+  session_date?: string;
+  mood_before?: number;
+  mood_after?: number;
+  tags?: string[];
+  is_private: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTherapyNoteRequest {
+  title: string;
+  content: string;
+  technique?: string;
+  session_date?: string;
+  mood_before?: number;
+  mood_after?: number;
+  tags?: string[];
+  is_private?: boolean;
+}
+
+export interface TherapyTechnique {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+}
+
+export interface TherapySession {
+  id: string;
+  title: string;
+  date: string;
+  duration_minutes: number;
+  notes?: string;
+  goals?: string[];
+  progress?: string;
+  next_session?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTherapySessionRequest {
+  title: string;
+  date: string;
+  duration_minutes: number;
+  notes?: string;
+  goals?: string[];
+  progress?: string;
+  next_session?: string;
+}
