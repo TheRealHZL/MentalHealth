@@ -87,6 +87,7 @@ async def register_patient(
             httponly=True,
             secure=False,  # Set to True in production with HTTPS
             samesite="lax",
+            path="/",  # CRITICAL: Allow cookie for all paths!
             max_age=3600 * 24 * 7,  # 7 days
         )
 
@@ -273,6 +274,7 @@ async def login(
             httponly=True,
             secure=False,  # Set to True in production with HTTPS
             samesite="lax",  # CSRF protection
+            path="/",  # CRITICAL: Allow cookie for all paths!
             max_age=3600 * 24 * 7,  # 7 days
         )
 
@@ -650,6 +652,7 @@ async def logout(
         httponly=True,
         secure=False,  # Must match the secure flag used when setting the cookie
         samesite="lax",
+        path="/",  # Must match the path used when setting the cookie
     )
 
     logger.info(f"User logged out: {user_id}")
