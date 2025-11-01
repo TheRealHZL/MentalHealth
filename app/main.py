@@ -215,6 +215,16 @@ def create_application() -> FastAPI:
             "architecture": "modular",
         }
 
+    @app.get("/ping", tags=["health"])
+    async def ping():
+        """
+        Docker healthcheck endpoint
+
+        Simple ping endpoint for container health checks.
+        Returns minimal response for fast health verification.
+        """
+        return {"status": "ok"}
+
     @app.get("/api/v1/modules", tags=["system"])
     async def list_modules(request: Request):
         """
