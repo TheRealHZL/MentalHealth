@@ -92,8 +92,8 @@ docker-compose -f docker-compose.full.yaml exec backend alembic upgrade head
 
 # 5. Access applications
 # Frontend:  http://localhost:3000
-# Backend:   http://localhost:8000
-# API Docs:  http://localhost:8000/docs
+# Backend:   http://localhost:8080
+# API Docs:  http://localhost:8080/docs
 ```
 
 ### Stop Services
@@ -253,9 +253,9 @@ The platform includes automated workflows for:
 
 ### API Documentation
 
-- **Swagger UI**: http://localhost:8000/docs (when running)
-- **ReDoc**: http://localhost:8000/redoc
-- **OpenAPI JSON**: http://localhost:8000/openapi.json
+- **Swagger UI**: http://localhost:8080/docs (when running)
+- **ReDoc**: http://localhost:8080/redoc
+- **OpenAPI JSON**: http://localhost:8080/openapi.json
 
 ---
 
@@ -461,7 +461,7 @@ If you find this project helpful, please consider giving it a star ⭐
 - [Deploy to Production](DEPLOYMENT_GUIDE.md)
 - [Run Tests](TESTING_GUIDE.md)
 - [View Architecture](COMPLETE_SYSTEM_OVERVIEW.md)
-- [API Documentation](http://localhost:8000/docs)
+- [API Documentation](http://localhost:8080/docs)
 
 ---
 

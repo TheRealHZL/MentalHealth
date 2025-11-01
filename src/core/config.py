@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
     DEBUG: bool = Field(default=True, env="DEBUG")
+    HOST: str = Field(default="0.0.0.0", env="HOST")
+    PORT: int = Field(default=8080, env="PORT")
 
     # Security
     SECRET_KEY: str = Field(..., env="SECRET_KEY")
