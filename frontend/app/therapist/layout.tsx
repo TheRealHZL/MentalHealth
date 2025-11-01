@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useAuthStore } from '@/store/auth-store'
+import { useAuth } from '@/hooks/useAuth'
 import { Users, Key, LayoutDashboard, LogOut } from 'lucide-react'
 
 export default function TherapistLayout({
@@ -12,24 +12,31 @@ export default function TherapistLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const { user, logout } = useAuthStore()
+  const { user, isAuthenticated, isLoading, logout } = useAuth()
 
   useEffect(() => {
-    // Redirect if not therapist
-    if (!user) {
-      router.push('/login')
-    } else if (user.role !== 'therapist') {
-      router.push('/dashboard')
+    if (!isLoading) {
+      // Redirect if not authenticated
+      if (!isAuthenticated) {
+        router.push('/login')
+      } else if (user?.role !== 'therapist') {
+        // Redirect if not therapist
+        router.push('/dashboard')
+      }
     }
-  }, [user, router])
+  }, [isLoading, isAuthenticated, user, router])
 
   const handleLogout = () => {
     logout()
     router.push('/login')
   }
 
-  if (!user || user.role !== 'therapist') {
-    return <div>Loading...</div>
+  if (isLoading || !isAuthenticated || user?.role !== 'therapist') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
   }
 
   return (
