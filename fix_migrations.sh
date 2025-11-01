@@ -82,10 +82,10 @@ case $choice in
             docker-compose exec -T backend python <<'PYTHON'
 import asyncio
 from sqlalchemy import text
-from src.core.database import get_async_session_local
+from src.core.database import AsyncSessionLocal
 
 async def drop_all():
-    async with get_async_session_local() as session:
+    async with AsyncSessionLocal() as session:
         # Disable foreign key checks temporarily
         await session.execute(text("SET session_replication_role = 'replica';"))
 
@@ -113,10 +113,10 @@ PYTHON
             python <<'PYTHON'
 import asyncio
 from sqlalchemy import text
-from src.core.database import get_async_session_local
+from src.core.database import AsyncSessionLocal
 
 async def drop_all():
-    async with get_async_session_local() as session:
+    async with AsyncSessionLocal() as session:
         await session.execute(text("SET session_replication_role = 'replica';"))
         result = await session.execute(text("""
             SELECT tablename FROM pg_tables
@@ -195,10 +195,10 @@ PYTHON
             docker-compose exec -T backend python <<'PYTHON'
 import asyncio
 from sqlalchemy import text
-from src.core.database import get_async_session_local
+from src.core.database import AsyncSessionLocal
 
 async def show_tables():
-    async with get_async_session_local() as session:
+    async with AsyncSessionLocal() as session:
         result = await session.execute(text("""
             SELECT tablename FROM pg_tables
             WHERE schemaname = 'public'
@@ -215,10 +215,10 @@ PYTHON
             python <<'PYTHON'
 import asyncio
 from sqlalchemy import text
-from src.core.database import get_async_session_local
+from src.core.database import AsyncSessionLocal
 
 async def show_tables():
-    async with get_async_session_local() as session:
+    async with AsyncSessionLocal() as session:
         result = await session.execute(text("""
             SELECT tablename FROM pg_tables
             WHERE schemaname = 'public'

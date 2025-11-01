@@ -121,6 +121,9 @@ class User(Base):
     # Conversation flows created by this user
     conversation_flows = relationship("ConversationFlow", back_populates="creator")
 
+    # User AI context (one-to-one relationship)
+    ai_context = relationship("UserContext", back_populates="user", uselist=False)
+
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
 
