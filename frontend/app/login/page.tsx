@@ -38,12 +38,19 @@ export default function LoginPage() {
       
       const response = await apiClient.login(data);
       setUser(response.user);
-      
+
       // Redirect based on role
-      if (response.user.role === 'patient') {
+      if (response.user.role === 'admin') {
+        router.push('/admin');
+      } else if (response.user.role === 'patient') {
+        router.push('/dashboard');
+      } else if (response.user.role === 'therapist') {
+        // Therapists also use the main dashboard for now
+        // TODO: Create dedicated /therapist dashboard if needed
         router.push('/dashboard');
       } else {
-        router.push('/therapist/dashboard');
+        // Fallback for unknown roles
+        router.push('/dashboard');
       }
     } catch (err: any) {
       setError(
