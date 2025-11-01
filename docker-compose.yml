@@ -148,6 +148,9 @@ services:
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
+      # Internal API URL for server-side API route handler (Docker service name)
+      INTERNAL_API_URL: http://backend:8080
+      # Public API URL for client-side (not used with API route handler)
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_API_VERSION: v1
     depends_on:

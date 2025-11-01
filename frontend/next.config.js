@@ -3,19 +3,6 @@ const nextConfig = {
   // Enable standalone output for Docker
   output: 'standalone',
 
-  // API configuration - Proxy to backend
-  async rewrites() {
-    // Internal API URL for server-side proxying (runtime)
-    const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:8080';
-
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${apiUrl}/api/:path*`,
-      },
-    ]
-  },
-
   // Security headers
   async headers() {
     return [
