@@ -26,6 +26,9 @@ from .training import (AIModelDeployment, ModelEvaluation, ModelVersion,
 # User Models
 from .user_models import (LoginAttempt, User, UserActivityLog,
                           UserNotification, UserRole, UserSession)
+# User Context Models (AI Isolation)
+from .user_context import (AIConversationHistory, UserAIPreferences,
+                            UserContext)
 
 # Export all models for easy importing
 __all__ = [
@@ -36,6 +39,9 @@ __all__ = [
     "UserSession",
     "UserNotification",
     "UserActivityLog",
+    "UserContext",
+    "AIConversationHistory",
+    "UserAIPreferences",
     # Content models
     "MoodEntry",
     "MoodLevel",
@@ -76,7 +82,16 @@ __all__ = [
 ]
 
 # Model categories for easy access
-USER_MODELS = [User, LoginAttempt, UserSession, UserNotification, UserActivityLog]
+USER_MODELS = [
+    User,
+    LoginAttempt,
+    UserSession,
+    UserNotification,
+    UserActivityLog,
+    UserContext,
+    AIConversationHistory,
+    UserAIPreferences,
+]
 CONTENT_MODELS = [MoodEntry, DreamEntry, TherapyNote]
 SHARING_MODELS = [
     ShareKey,
