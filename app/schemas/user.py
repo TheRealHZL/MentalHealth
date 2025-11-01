@@ -131,3 +131,6 @@ class TokenResponse(BaseModel):
     user: Dict[str, Any]
     message: Optional[str] = None
     next_steps: Optional[List[str]] = None
+
+# Alias for admin endpoints compatibility
+UserResponse = UserProfileResponse
