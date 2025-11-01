@@ -74,9 +74,11 @@ services:
       # Environment
       ENVIRONMENT: development
       LOG_LEVEL: info
+      HOST: 0.0.0.0
+      PORT: 8080
 
-      # CORS
-      CORS_ORIGINS: http://localhost:3000,http://frontend:3000
+      # CORS - Allow both localhost (host access) and service names (container access)
+      CORS_ORIGINS: http://localhost:3000,http://frontend:3000,http://backend:8080,http://localhost:8080
 
       # API
       API_PREFIX: /api/v1
@@ -113,7 +115,8 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      # Use Docker service name for internal communication
+      NEXT_PUBLIC_API_URL: http://backend:8080
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
