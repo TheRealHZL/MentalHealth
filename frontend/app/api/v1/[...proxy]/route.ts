@@ -33,7 +33,12 @@ async function handleRequest(request: NextRequest, method: string) {
     const cookieHeader = request.headers.get('cookie');
     if (cookieHeader) {
       headers['Cookie'] = cookieHeader;
-      console.log(`[API Proxy] Forwarding cookie to backend: ${cookieHeader.substring(0, 50)}...`);
+      // Log all cookies to debug
+      const cookies = cookieHeader.split(';').map(c => {
+        const [name] = c.trim().split('=');
+        return name;
+      });
+      console.log(`[API Proxy] Cookies from browser: ${cookies.join(', ')}`);
     } else {
       console.log(`[API Proxy] No cookie in request`);
     }
@@ -102,23 +107,48 @@ async function handleRequest(request: NextRequest, method: string) {
 
     if (setCookies.length > 0) {
       setCookies.forEach((cookie: string) => {
-        response.headers.append('Set-Cookie', cookie);
+        console.log(`[API Proxy] Cookie from backend: ${cookie.substring(0, 100)}...`);
+
+        // IMPORTANT: Remove 'Domain' attribute if present
+        // The cookie should be set for the current domain (localhost:3000)
+        // not for the backend domain (backend:8080)
+        let modifiedCookie = cookie;
+        if (modifiedCookie.includes('Domain=')) {
+          // Remove Domain attribute
+          modifiedCookie = modifiedCookie.replace(/;\s*Domain=[^;]+/gi, '');
+          console.log(`[API Proxy] Removed Domain attribute from cookie`);
+        }
+
+        response.headers.append('Set-Cookie', modifiedCookie);
       });
       console.log(`[API Proxy] Forwarding ${setCookies.length} cookies to client`);
     } else {
       // Fallback: try to get set-cookie the old way
       const setCookieHeader = backendResponse.headers.get('set-cookie');
       if (setCookieHeader) {
-        response.headers.append('Set-Cookie', setCookieHeader);
+        console.log(`[API Proxy] Cookie from backend (fallback): ${setCookieHeader.substring(0, 100)}...`);
+
+        // Remove Domain attribute if present
+        let modifiedCookie = setCookieHeader;
+        if (modifiedCookie.includes('Domain=')) {
+          modifiedCookie = modifiedCookie.replace(/;\s*Domain=[^;]+/gi, '');
+          console.log(`[API Proxy] Removed Domain attribute from cookie`);
+        }
+
+        response.headers.append('Set-Cookie', modifiedCookie);
         console.log(`[API Proxy] Forwarding cookie (fallback method)`);
       } else {
         console.log(`[API Proxy] No Set-Cookie header found in backend response`);
       }
     }
 
-    // Ensure CORS headers are set for development
-    response.headers.set('Access-Control-Allow-Origin', request.headers.get('origin') || '*');
-    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    // Set CORS headers for development
+    // IMPORTANT: Cannot use '*' with credentials: true
+    const origin = request.headers.get('origin');
+    if (origin) {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
+    }
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
 
@@ -156,14 +186,21 @@ export async function PATCH(request: NextRequest) {
 
 export async function OPTIONS(request: NextRequest) {
   // Handle CORS preflight requests
+  const origin = request.headers.get('origin');
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
+    'Access-Control-Max-Age': '86400', // 24 hours
+  };
+
+  // Only set origin and credentials if origin is present
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
+
   return new NextResponse(null, {
     status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': request.headers.get('origin') || '*',
-      'Access-Control-Allow-Credentials': 'true',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-      'Access-Control-Max-Age': '86400', // 24 hours
-    },
+    headers,
   });
 }
