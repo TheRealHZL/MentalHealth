@@ -607,7 +607,7 @@ Type=simple
 User=$USER
 WorkingDirectory=$INSTALL_DIR
 Environment="PATH=$INSTALL_DIR/venv/bin"
-ExecStart=$INSTALL_DIR/venv/bin/uvicorn src.main:app --host 0.0.0.0 --port 8000
+ExecStart=$INSTALL_DIR/venv/bin/uvicorn src.main:app --host 0.0.0.0 --port 8080
 Restart=always
 
 [Install]
@@ -640,7 +640,7 @@ EOF
     sudo systemctl start mindbridge-frontend
 
     log_success "Local deployment completed"
-    log_info "Backend: http://localhost:8000"
+    log_info "Backend: http://localhost:8080"
     log_info "Frontend: http://localhost:3000"
 }
 
@@ -668,7 +668,7 @@ deploy_docker() {
     fi
 
     log_success "Docker deployment completed"
-    log_info "Backend: http://localhost:8000"
+    log_info "Backend: http://localhost:8080"
     log_info "Frontend: http://localhost:3000"
 }
 
@@ -731,7 +731,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://localhost:8000;
+        proxy_pass http://localhost:8080;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -831,8 +831,8 @@ EOF
         echo -e "   API Docs: https://$DOMAIN/docs"
     else
         echo -e "   Frontend: http://localhost:3000"
-        echo -e "   Backend API: http://localhost:8000"
-        echo -e "   API Docs: http://localhost:8000/docs"
+        echo -e "   Backend API: http://localhost:8080"
+        echo -e "   API Docs: http://localhost:8080/docs"
     fi
 
     echo -e "\n${BLUE}📝 Useful Commands:${NC}"

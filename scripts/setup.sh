@@ -79,7 +79,7 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+CORS_ORIGINS=http://localhost:3000,http://localhost:8080
 
 # AI Configuration (uses custom PyTorch models - no external APIs needed)
 AI_DEVICE=cpu
@@ -90,7 +90,7 @@ LOG_LEVEL=info
 ENVIRONMENT=production
 
 # Frontend
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:8080
 NODE_ENV=production
 EOF
         print_success ".env file created"
@@ -261,8 +261,8 @@ echo ""
 if [ "$DEPLOYMENT_TYPE" = "docker" ]; then
     echo -e "${BLUE}Access the application at:${NC}"
     echo -e "  Frontend: ${YELLOW}http://localhost:3000${NC}"
-    echo -e "  Backend:  ${YELLOW}http://localhost:8000${NC}"
-    echo -e "  API Docs: ${YELLOW}http://localhost:8000/docs${NC}"
+    echo -e "  Backend:  ${YELLOW}http://localhost:8080${NC}"
+    echo -e "  API Docs: ${YELLOW}http://localhost:8080/docs${NC}"
 elif [ "$DEPLOYMENT_TYPE" = "k8s" ]; then
     echo -e "${BLUE}Access the application via:${NC}"
     echo -e "  ${YELLOW}kubectl port-forward -n mentalhealth svc/frontend-service 3000:3000${NC}"

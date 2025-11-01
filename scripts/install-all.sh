@@ -286,7 +286,7 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+CORS_ORIGINS=http://localhost:3000,http://localhost:8080
 
 # AI Configuration (uses custom PyTorch models - no external APIs needed)
 AI_DEVICE=cpu
@@ -297,7 +297,7 @@ LOG_LEVEL=info
 ENVIRONMENT=production
 
 # Frontend
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:8080
 NODE_ENV=production
 EOF
 
@@ -369,7 +369,7 @@ print_success "Database is ready"
 
 print_info "Waiting for backend to be ready..."
 RETRY_COUNT=0
-while ! curl -sf http://localhost:8000/health &> /dev/null; do
+while ! curl -sf http://localhost:8080/health &> /dev/null; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
         print_error "Backend failed to start"
@@ -489,8 +489,8 @@ echo ""
 echo -e "${GREEN}Access your MentalHealth Platform:${NC}"
 echo ""
 echo -e "  🌐 Frontend:  ${CYAN}http://localhost:3000${NC}"
-echo -e "  🔧 Backend:   ${CYAN}http://localhost:8000${NC}"
-echo -e "  📚 API Docs:  ${CYAN}http://localhost:8000/docs${NC}"
+echo -e "  🔧 Backend:   ${CYAN}http://localhost:8080${NC}"
+echo -e "  📚 API Docs:  ${CYAN}http://localhost:8080/docs${NC}"
 echo -e "  👑 Admin Panel: ${CYAN}http://localhost:3000/admin${NC}"
 echo ""
 

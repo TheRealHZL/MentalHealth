@@ -49,8 +49,8 @@ docker-compose -f docker-compose.full.yaml exec backend python scripts/seed_data
 ## 4. Access Applications
 
 🌐 **Frontend**: http://localhost:3000
-🔌 **Backend API**: http://localhost:8000
-📚 **API Documentation**: http://localhost:8000/docs
+🔌 **Backend API**: http://localhost:8080
+📚 **API Documentation**: http://localhost:8080/docs
 🗄️ **Database Admin**: http://localhost:5050 (start with `--profile tools`)
 
 ## 5. Test It Works
@@ -65,10 +65,10 @@ docker-compose -f docker-compose.full.yaml exec backend python scripts/seed_data
 
 ```bash
 # Health check
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 
 # Get API info
-curl http://localhost:8000/api/v1/info
+curl http://localhost:8080/api/v1/info
 ```
 
 ## Stop Services
@@ -87,7 +87,7 @@ docker-compose -f docker-compose.full.yaml down -v
 
 ```bash
 # Check what's using the port
-lsof -i :8000  # Backend
+lsof -i :8080  # Backend
 lsof -i :3000  # Frontend
 
 # Kill the process or change ports in docker-compose.full.yaml

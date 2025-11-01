@@ -118,7 +118,7 @@ stringData:
   DEBUG: "false"
   LOG_LEVEL: info
   ENVIRONMENT: production
-  CORS_ORIGINS: http://localhost:3000,http://localhost:8000
+  CORS_ORIGINS: http://localhost:3000,http://localhost:8080
 EOF
     print_success "Secrets generated"
 fi
@@ -265,7 +265,7 @@ if [ "$INGRESS_IP" != "pending" ]; then
     echo -e "  API:         ${BLUE}http://${INGRESS_IP}/api${NC}"
 else
     echo -e "  Frontend:    ${BLUE}http://${FRONTEND_IP}:3000${NC} (LoadBalancer pending)"
-    echo -e "  Backend:     ${BLUE}http://${BACKEND_IP}:8000${NC} (LoadBalancer pending)"
+    echo -e "  Backend:     ${BLUE}http://${BACKEND_IP}:8080${NC} (LoadBalancer pending)"
 fi
 
 echo ""
@@ -274,7 +274,7 @@ echo -e "${YELLOW}Note:${NC} For local clusters (minikube/kind), use port-forwar
 echo ""
 echo -e "${BLUE}Port forwarding commands:${NC}"
 echo -e "  Frontend:  ${YELLOW}kubectl port-forward -n ${NAMESPACE} svc/frontend-service 3000:3000${NC}"
-echo -e "  Backend:   ${YELLOW}kubectl port-forward -n ${NAMESPACE} svc/backend-service 8000:8000${NC}"
+echo -e "  Backend:   ${YELLOW}kubectl port-forward -n ${NAMESPACE} svc/backend-service 8000:8080${NC}"
 echo ""
 
 echo -e "${BLUE}Useful commands:${NC}"

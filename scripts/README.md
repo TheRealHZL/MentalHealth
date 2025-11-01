@@ -80,7 +80,7 @@ chmod +x install-all.sh
 **What you get:**
 - Complete platform running on http://localhost:3000
 - Admin panel at http://localhost:3000/admin
-- API docs at http://localhost:8000/docs
+- API docs at http://localhost:8080/docs
 - All services configured and ready
 
 ---
@@ -340,7 +340,7 @@ newgrp docker
 ```bash
 # Find what's using the port
 sudo lsof -i :3000
-sudo lsof -i :8000
+sudo lsof -i :8080
 
 # Kill the process
 kill -9 <PID>

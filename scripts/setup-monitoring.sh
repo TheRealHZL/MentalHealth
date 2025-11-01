@@ -273,7 +273,7 @@ echo -e "  Check targets status at: ${YELLOW}Prometheus → Status → Targets${
 echo ""
 
 echo -e "${GREEN}Monitoring stack is now collecting metrics!${NC}"
-echo -e "  - Backend metrics:     ${YELLOW}http://<backend-ip>:8000/metrics${NC}"
+echo -e "  - Backend metrics:     ${YELLOW}http://<backend-ip>:8080/metrics${NC}"
 echo -e "  - PostgreSQL metrics:  ${YELLOW}Prometheus will scrape automatically${NC}"
 echo -e "  - Redis metrics:       ${YELLOW}Prometheus will scrape automatically${NC}"
 echo ""

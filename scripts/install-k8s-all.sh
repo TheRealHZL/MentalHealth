@@ -345,7 +345,7 @@ stringData:
   DEBUG: "false"
   LOG_LEVEL: info
   ENVIRONMENT: production
-  CORS_ORIGINS: http://localhost:3000,http://localhost:8000
+  CORS_ORIGINS: http://localhost:3000,http://localhost:8080
 EOF
 
 kubectl apply -f k8s/secrets/app-secrets-generated.yaml
@@ -502,12 +502,12 @@ else
     echo -e "  Run these commands in separate terminals:"
     echo ""
     echo -e "  ${CYAN}kubectl port-forward -n ${NAMESPACE} svc/frontend-service 3000:3000${NC}"
-    echo -e "  ${CYAN}kubectl port-forward -n ${NAMESPACE} svc/backend-service 8000:8000${NC}"
+    echo -e "  ${CYAN}kubectl port-forward -n ${NAMESPACE} svc/backend-service 8000:8080${NC}"
     echo ""
     echo -e "  Then access:"
     echo -e "  🌐 Frontend:  ${CYAN}http://localhost:3000${NC}"
-    echo -e "  🔧 Backend:   ${CYAN}http://localhost:8000${NC}"
-    echo -e "  📚 API Docs:  ${CYAN}http://localhost:8000/docs${NC}"
+    echo -e "  🔧 Backend:   ${CYAN}http://localhost:8080${NC}"
+    echo -e "  📚 API Docs:  ${CYAN}http://localhost:8080/docs${NC}"
     echo -e "  👑 Admin:     ${CYAN}http://localhost:3000/admin${NC}"
 fi
 
