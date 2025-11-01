@@ -320,17 +320,39 @@ async def get_current_user_id(
 
 async def get_current_user_with_role(
     required_role: str,
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
 ) -> str:
-    """Get current user ID and verify role"""
+    """
+    Get current user ID and verify role
 
-    token = credentials.credentials
+    Token extraction priority:
+    1. httpOnly Cookie (secure, XSS-protected)
+    2. Authorization Header (backward compatibility)
+    """
+    token = None
+
+    # Priority 1: Try to get token from httpOnly cookie
+    if "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
+
+    # Priority 2: Fallback to Authorization header
+    elif credentials:
+        token = credentials.credentials
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated. Please login.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     payload = verify_token(token)
 
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -354,17 +376,39 @@ async def get_current_user_with_role(
 
 
 async def require_patient_or_therapist(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
 ) -> str:
-    """Require user to be either patient or therapist"""
+    """
+    Require user to be either patient or therapist
 
-    token = credentials.credentials
+    Token extraction priority:
+    1. httpOnly Cookie (secure, XSS-protected)
+    2. Authorization Header (backward compatibility)
+    """
+    token = None
+
+    # Priority 1: Try to get token from httpOnly cookie
+    if "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
+
+    # Priority 2: Fallback to Authorization header
+    elif credentials:
+        token = credentials.credentials
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated. Please login.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     payload = verify_token(token)
 
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -388,17 +432,40 @@ async def require_patient_or_therapist(
 
 
 async def get_current_user_role(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
 ) -> tuple[str, str]:
-    """Get current user ID and role from JWT token"""
+    """
+    Get current user ID and role from JWT token
 
-    token = credentials.credentials
+    Token extraction priority:
+    1. httpOnly Cookie (secure, XSS-protected)
+    2. Authorization Header (backward compatibility)
+    """
+    token = None
+
+    # Priority 1: Try to get token from httpOnly cookie (more secure!)
+    if "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
+
+    # Priority 2: Fallback to Authorization header (backward compatibility)
+    elif credentials:
+        token = credentials.credentials
+
+    # No token found
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated. Please login.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     payload = verify_token(token)
 
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -560,14 +627,19 @@ def get_token_from_cookie_or_header(request: Request) -> Optional[str]:
 
 
 async def require_admin(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
 ) -> str:
     """
     Require admin role
 
     Returns user_id if admin, raises 403 otherwise
+
+    Token extraction priority:
+    1. httpOnly Cookie (secure, XSS-protected)
+    2. Authorization Header (backward compatibility)
     """
-    user_id, user_role = await get_current_user_role(credentials)
+    user_id, user_role = await get_current_user_role(request, credentials)
 
     if user_role != "admin":
         raise HTTPException(
@@ -578,14 +650,19 @@ async def require_admin(
 
 
 async def require_therapist_or_admin(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
 ) -> str:
     """
     Require therapist or admin role
 
     Returns user_id if therapist or admin, raises 403 otherwise
+
+    Token extraction priority:
+    1. httpOnly Cookie (secure, XSS-protected)
+    2. Authorization Header (backward compatibility)
     """
-    user_id, user_role = await get_current_user_role(credentials)
+    user_id, user_role = await get_current_user_role(request, credentials)
 
     if user_role not in ["therapist", "admin"]:
         raise HTTPException(
