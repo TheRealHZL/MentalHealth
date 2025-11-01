@@ -49,11 +49,13 @@ services:
     container_name: mindbridge-backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8080:8080"
     environment:
       # Application
       ENVIRONMENT: development
       DEBUG: "true"
+      HOST: 0.0.0.0
+      PORT: 8080
 
       # Database
       DATABASE_URL: postgresql+asyncpg://mindbridge_user:mindbridge_secure_password_change_me@postgres:5432/mindbridge_db
@@ -126,7 +128,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/ping"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ping"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -146,7 +148,7 @@ services:
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_API_VERSION: v1
     depends_on:
       backend:
