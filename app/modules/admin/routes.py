@@ -129,7 +129,7 @@ async def get_recent_activity(
         # Get recent training jobs
         recent_training = await db.scalars(
             select(TrainingJob)
-            .order_by(TrainingJob.created_at.desc())
+            .order_by(TrainingJob.queued_at.desc())  # TrainingJob uses queued_at, not created_at
             .limit(limit // 2)
         )
 
@@ -139,8 +139,8 @@ async def get_recent_activity(
                     id=str(job.id),
                     type="training",
                     message=f"Training job for {job.model_type} {job.status}",
-                    timestamp=job.created_at,
-                    user_id=str(job.created_by) if job.created_by else None,
+                    timestamp=job.queued_at,  # TrainingJob uses queued_at, not created_at
+                    user_id=str(job.started_by) if job.started_by else None,  # TrainingJob uses started_by, not created_by
                 )
             )
 
@@ -216,7 +216,29 @@ async def get_all_users(
         query = query.offset(skip).limit(limit)
 
         users = await db.scalars(query)
-        return [UserResponse.from_orm(user) for user in users]
+        user_list = users.all()
+
+        # Convert to response models
+        result = []
+        for user in user_list:
+            result.append(UserResponse(
+                id=str(user.id),
+                email=user.email,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                role=user.role,
+                is_verified=user.is_verified,
+                timezone=user.timezone,
+                created_at=user.created_at,
+                last_login=user.last_login,
+                license_number=user.license_number if user.role == "therapist" else None,
+                specializations=user.specializations if user.role == "therapist" else None,
+                practice_address=user.practice_address if user.role == "therapist" else None,
+                phone_number=user.phone_number if user.role == "therapist" else None,
+                bio=user.bio if user.role == "therapist" else None,
+            ))
+
+        return result
 
     except Exception as e:
         raise HTTPException(
