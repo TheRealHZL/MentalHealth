@@ -33,7 +33,12 @@ async function handleRequest(request: NextRequest, method: string) {
     const cookieHeader = request.headers.get('cookie');
     if (cookieHeader) {
       headers['Cookie'] = cookieHeader;
-      console.log(`[API Proxy] Forwarding cookie to backend: ${cookieHeader.substring(0, 50)}...`);
+      // Log all cookies to debug
+      const cookies = cookieHeader.split(';').map(c => {
+        const [name] = c.trim().split('=');
+        return name;
+      });
+      console.log(`[API Proxy] Cookies from browser: ${cookies.join(', ')}`);
     } else {
       console.log(`[API Proxy] No cookie in request`);
     }
@@ -102,6 +107,7 @@ async function handleRequest(request: NextRequest, method: string) {
 
     if (setCookies.length > 0) {
       setCookies.forEach((cookie: string) => {
+        console.log(`[API Proxy] Cookie from backend: ${cookie.substring(0, 100)}...`);
         response.headers.append('Set-Cookie', cookie);
       });
       console.log(`[API Proxy] Forwarding ${setCookies.length} cookies to client`);
@@ -109,6 +115,7 @@ async function handleRequest(request: NextRequest, method: string) {
       // Fallback: try to get set-cookie the old way
       const setCookieHeader = backendResponse.headers.get('set-cookie');
       if (setCookieHeader) {
+        console.log(`[API Proxy] Cookie from backend (fallback): ${setCookieHeader.substring(0, 100)}...`);
         response.headers.append('Set-Cookie', setCookieHeader);
         console.log(`[API Proxy] Forwarding cookie (fallback method)`);
       } else {
