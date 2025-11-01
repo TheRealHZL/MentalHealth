@@ -33,6 +33,9 @@ async function handleRequest(request: NextRequest, method: string) {
     const cookieHeader = request.headers.get('cookie');
     if (cookieHeader) {
       headers['Cookie'] = cookieHeader;
+      console.log(`[API Proxy] Forwarding cookie to backend: ${cookieHeader.substring(0, 50)}...`);
+    } else {
+      console.log(`[API Proxy] No cookie in request`);
     }
 
     // Forward authorization header if present (for backward compatibility)
@@ -68,6 +71,9 @@ async function handleRequest(request: NextRequest, method: string) {
     // Make request to backend
     const backendResponse = await fetch(backendUrl, fetchOptions);
 
+    // Log backend response
+    console.log(`[API Proxy] Backend response: ${backendResponse.status} ${backendResponse.statusText}`);
+
     // Get response body
     const responseBody = await backendResponse.text();
 
@@ -78,10 +84,37 @@ async function handleRequest(request: NextRequest, method: string) {
     });
 
     // Forward all headers from backend to client
+    // IMPORTANT: Set-Cookie must be handled specially!
     backendResponse.headers.forEach((value, key) => {
-      // Forward all headers including Set-Cookie
-      response.headers.set(key, value);
+      // Skip Set-Cookie - we handle it separately below
+      if (key.toLowerCase() !== 'set-cookie') {
+        response.headers.set(key, value);
+      }
     });
+
+    // Handle Set-Cookie header specially
+    // Node.js fetch() hides set-cookie headers for security reasons!
+    // We need to access them via getSetCookie() method or raw headers
+    // @ts-ignore - getSetCookie is available in newer versions
+    const setCookies = backendResponse.headers.getSetCookie ?
+      backendResponse.headers.getSetCookie() :
+      [];
+
+    if (setCookies.length > 0) {
+      setCookies.forEach((cookie: string) => {
+        response.headers.append('Set-Cookie', cookie);
+      });
+      console.log(`[API Proxy] Forwarding ${setCookies.length} cookies to client`);
+    } else {
+      // Fallback: try to get set-cookie the old way
+      const setCookieHeader = backendResponse.headers.get('set-cookie');
+      if (setCookieHeader) {
+        response.headers.append('Set-Cookie', setCookieHeader);
+        console.log(`[API Proxy] Forwarding cookie (fallback method)`);
+      } else {
+        console.log(`[API Proxy] No Set-Cookie header found in backend response`);
+      }
+    }
 
     // Ensure CORS headers are set for development
     response.headers.set('Access-Control-Allow-Origin', request.headers.get('origin') || '*');
