@@ -1,7 +1,7 @@
 """Enable Row-Level Security for User Isolation
 
 Revision ID: 003
-Revises: 002
+Revises: 002_add_encrypted_models
 Create Date: 2025-10-29
 
 This migration enables PostgreSQL Row-Level Security (RLS) on all user-data tables.
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = '003'
-down_revision = '002'
+down_revision = '002_add_encrypted_models'
 branch_labels = None
 depends_on = None
 
