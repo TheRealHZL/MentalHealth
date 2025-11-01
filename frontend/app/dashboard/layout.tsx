@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { ThemeSwitcher } from '@/components/settings/ThemeSwitcher';
 import {
   Brain,
   Home,
@@ -155,6 +156,10 @@ export default function DashboardLayout({
 
           {/* Bottom Actions */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Theme</span>
+              <ThemeSwitcher />
+            </div>
             <Link
               href="/dashboard/settings"
               onClick={() => setIsMobileMenuOpen(false)}

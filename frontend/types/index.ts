@@ -115,6 +115,41 @@ export interface WellnessScore {
   };
 }
 
+export interface MoodPatterns {
+  bestDay: string;
+  worstDay: string;
+  bestTime: string;
+  patterns: Array<{
+    day: string;
+    avgMood: number;
+    count: number;
+  }>;
+}
+
+export interface ActivityCorrelation {
+  activity: string;
+  impact: number;
+  count: number;
+}
+
+export interface WeeklyInsight {
+  weekStart: string;
+  weekEnd: string;
+  avgMood: number;
+  totalEntries: number;
+  insights: string[];
+  recommendations: string[];
+}
+
+export interface MonthlyInsight {
+  month: string;
+  year: number;
+  avgMood: number;
+  totalEntries: number;
+  insights: string[];
+  recommendations: string[];
+}
+
 // AI Types
 export interface AIMoodAnalysis {
   summary: string;
