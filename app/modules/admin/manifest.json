@@ -1,0 +1,10 @@
+{
+  "name": "admin",
+  "version": "1.0.0",
+  "description": "Admin module",
+  "enabled": true,
+  "routes_prefix": "/api/v1/admin",
+  "tags": ["admin"],
+  "dependencies": [],
+  "author": "MindBridge Team"
+}

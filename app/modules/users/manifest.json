@@ -1,0 +1,18 @@
+{
+  "name": "users",
+  "version": "1.0.0",
+  "description": "User management, authentication, and profile",
+  "enabled": true,
+  "routes_prefix": "/api/v1/users",
+  "tags": ["users", "authentication"],
+  "dependencies": [],
+  "author": "MindBridge Team",
+  "features": [
+    "User registration (patient/therapist)",
+    "Authentication (JWT + httpOnly cookies)",
+    "Profile management",
+    "Password management",
+    "Account deletion (GDPR)"
+  ],
+  "permissions": ["public", "authenticated"]
+}

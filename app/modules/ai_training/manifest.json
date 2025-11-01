@@ -1,0 +1,25 @@
+{
+  "name": "ai_training",
+  "version": "1.0.0",
+  "description": "In-house AI model training and management (PyTorch-based, no external APIs)",
+  "enabled": true,
+  "routes_prefix": "/api/v1/ai-training",
+  "tags": ["ai-training", "machine-learning"],
+  "dependencies": [],
+  "author": "MindBridge Team",
+  "features": [
+    "Upload and manage training datasets",
+    "Train custom PyTorch models locally",
+    "Model evaluation and testing",
+    "Deploy trained models",
+    "No external AI APIs required"
+  ],
+  "model_types": [
+    "mood_classifier",
+    "dream_interpreter",
+    "sentiment_analyzer",
+    "risk_assessor",
+    "recommendation_engine"
+  ],
+  "permissions": ["admin", "therapist"]
+}
