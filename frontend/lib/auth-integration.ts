@@ -62,7 +62,7 @@ export async function encryptedLogin(
     // Step 2: Try to get encryption metadata
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/encryption/metadata`,
+        '/api/v1/encryption/metadata',
         {
           headers: {
             'Authorization': `Bearer ${authResponse.access_token}`
@@ -259,7 +259,7 @@ export async function saveRecoveryKey(recoveryKey: string): Promise<boolean> {
     // Send to server
     const token = localStorage.getItem('token');
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/encryption/recovery-key`,
+      '/api/v1/encryption/recovery-key',
       {
         method: 'POST',
         headers: {
