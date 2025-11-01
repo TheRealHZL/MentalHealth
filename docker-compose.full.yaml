@@ -45,7 +45,7 @@ services:
       dockerfile: Dockerfile.production
     container_name: mentalhealth-backend
     ports:
-      - "8000:8000"
+      - "8080:8080"
     environment:
       # Database
       DATABASE_HOST: postgres
@@ -95,7 +95,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -113,7 +113,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:

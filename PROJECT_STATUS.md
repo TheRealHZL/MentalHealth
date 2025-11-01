@@ -64,8 +64,8 @@ cd /Users/sebastianstumpf/Documents/GitHub/MentalHealth
 python3 -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 # API Dokumentation:
-http://localhost:8000/docs
-http://localhost:8000/redoc
+http://localhost:8080/docs
+http://localhost:8080/redoc
 ```
 
 ### Verfügbare Endpoints:
@@ -165,7 +165,7 @@ docker run --name mindbridge-redis \
 python3 -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 # Production Server
-gunicorn src.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
+gunicorn src.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8080
 ```
 
 ---
@@ -176,13 +176,13 @@ gunicorn src.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
 
 ```bash
 # Health Check
-curl http://localhost:8000/ping
+curl http://localhost:8080/ping
 
 # Root Endpoint
-curl http://localhost:8000/
+curl http://localhost:8080/
 
 # Swagger UI
-open http://localhost:8000/docs
+open http://localhost:8080/docs
 ```
 
 ### Evaluation System Testen
@@ -199,7 +199,7 @@ python3 test_evaluation.py
 
 ```bash
 # Patient registrieren
-curl -X POST http://localhost:8000/api/v1/users/register/patient \
+curl -X POST http://localhost:8080/api/v1/users/register/patient \
   -H "Content-Type: application/json" \
   -d '{
     "email": "patient@example.com",
@@ -210,12 +210,12 @@ curl -X POST http://localhost:8000/api/v1/users/register/patient \
   }'
 
 # Login
-curl -X POST http://localhost:8000/api/v1/users/login \
+curl -X POST http://localhost:8080/api/v1/users/login \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=patient@example.com&password=SecurePass123!"
 
 # Mood Entry erstellen (mit Token)
-curl -X POST http://localhost:8000/api/v1/mood/ \
+curl -X POST http://localhost:8080/api/v1/mood/ \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{

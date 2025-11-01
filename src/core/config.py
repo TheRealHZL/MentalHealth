@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
     DEBUG: bool = Field(default=True, env="DEBUG")
+    HOST: str = Field(default="0.0.0.0", env="HOST")
+    PORT: int = Field(default=8080, env="PORT")
 
     # Security
     SECRET_KEY: str = Field(..., env="SECRET_KEY")
@@ -89,9 +91,14 @@ class Settings(BaseSettings):
         default="pdf,jpg,jpeg,png", env="ALLOWED_FILE_TYPES"
     )
 
+    # Redis Configuration
+    REDIS_HOST: str = Field(default="localhost", env="REDIS_HOST")
+    REDIS_PORT: int = Field(default=6379, env="REDIS_PORT")
+    REDIS_PASSWORD: Optional[str] = Field(default=None, env="REDIS_PASSWORD")
+    REDIS_DB: int = Field(default=0, env="REDIS_DB")
+
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = Field(default=True, env="RATE_LIMIT_ENABLED")
-
     DEFAULT_RATE_LIMIT: int = Field(default=100, env="DEFAULT_RATE_LIMIT")  # per hour
     AUTH_RATE_LIMIT: int = Field(default=5, env="AUTH_RATE_LIMIT")  # per 15 minutes
 
