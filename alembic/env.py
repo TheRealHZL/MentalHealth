@@ -10,14 +10,14 @@ from logging.config import fileConfig
 import os
 import sys
 
-# Add src to path
+# Add app to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.core.config import get_settings
-from src.core.database import Base
+from app.core.config import get_settings
+from app.core.database import Base
 
 # Import all models to ensure they're registered
-from src.models import ALL_MODELS
+from app.models import ALL_MODELS
 
 settings = get_settings()
 config = context.config
