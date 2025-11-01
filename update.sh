@@ -346,7 +346,7 @@ verify_update() {
             fi
 
             # Check backend health
-            if curl -sf http://localhost:8000/ping > /dev/null; then
+            if curl -sf http://localhost:8080/ping > /dev/null; then
                 log_success "Backend is healthy"
             else
                 log_warning "Backend health check failed"
@@ -363,7 +363,7 @@ verify_update() {
             fi
 
             # Check backend health
-            if docker-compose exec -T backend curl -sf http://localhost:8000/ping > /dev/null; then
+            if docker-compose exec -T backend curl -sf http://localhost:8080/ping > /dev/null; then
                 log_success "Backend is healthy"
             else
                 log_warning "Backend health check failed"

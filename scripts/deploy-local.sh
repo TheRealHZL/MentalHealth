@@ -96,7 +96,7 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+CORS_ORIGINS=http://localhost:3000,http://localhost:8080
 
 # AI Configuration (uses custom PyTorch models - no external APIs needed)
 AI_DEVICE=cpu
@@ -107,7 +107,7 @@ LOG_LEVEL=info
 ENVIRONMENT=production
 
 # Frontend
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:8080
 NODE_ENV=production
 EOF
         print_success "Default .env file created"
@@ -161,7 +161,7 @@ print_info "Waiting for backend to be ready..."
 sleep 5
 MAX_RETRIES=30
 RETRY_COUNT=0
-while ! curl -sf http://localhost:8000/health &> /dev/null; do
+while ! curl -sf http://localhost:8080/health &> /dev/null; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
         print_error "Backend failed to start after $MAX_RETRIES attempts"
@@ -195,7 +195,7 @@ print_success "Frontend is ready"
 
 # Health check
 print_info "Performing health checks..."
-BACKEND_HEALTH=$(curl -sf http://localhost:8000/health | grep -o '"status":"healthy"' || echo "")
+BACKEND_HEALTH=$(curl -sf http://localhost:8080/health | grep -o '"status":"healthy"' || echo "")
 if [ -n "$BACKEND_HEALTH" ]; then
     print_success "Backend health check passed"
 else
@@ -217,8 +217,8 @@ echo -e "${GREEN}======================================${NC}"
 echo ""
 echo -e "${GREEN}Access the application at:${NC}"
 echo -e "  Frontend:  ${BLUE}http://localhost:3000${NC}"
-echo -e "  Backend:   ${BLUE}http://localhost:8000${NC}"
-echo -e "  API Docs:  ${BLUE}http://localhost:8000/docs${NC}"
+echo -e "  Backend:   ${BLUE}http://localhost:8080${NC}"
+echo -e "  API Docs:  ${BLUE}http://localhost:8080/docs${NC}"
 echo ""
 echo -e "${YELLOW}Default credentials (if created):${NC}"
 echo -e "  Email:    admin@mentalhealth.com"

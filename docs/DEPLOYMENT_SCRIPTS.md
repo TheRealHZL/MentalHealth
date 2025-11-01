@@ -29,8 +29,8 @@ Deploy the entire platform locally in **3 minutes**:
 
 That's it! Access the application at:
 - **Frontend**: http://localhost:3000
-- **Backend**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
+- **Backend**: http://localhost:8080
+- **API Docs**: http://localhost:8080/docs
 
 ### Kubernetes Production Deployment
 
@@ -117,8 +117,8 @@ Deployment Complete!
 
 Access the application at:
   Frontend:  http://localhost:3000
-  Backend:   http://localhost:8000
-  API Docs:  http://localhost:8000/docs
+  Backend:   http://localhost:8080
+  API Docs:  http://localhost:8080/docs
 ```
 
 ---
@@ -219,7 +219,7 @@ Access the application at:
 
 Port forwarding commands:
   Frontend:  kubectl port-forward -n mentalhealth svc/frontend-service 3000:3000
-  Backend:   kubectl port-forward -n mentalhealth svc/backend-service 8000:8000
+  Backend:   kubectl port-forward -n mentalhealth svc/backend-service 8000:8080
 ```
 
 ---
@@ -385,7 +385,7 @@ kubectl port-forward -n monitoring svc/prometheus-service 9090:9090
 **Prometheus Targets**:
 
 The script automatically configures Prometheus to scrape:
-- Backend: `http://backend-service:8000/metrics`
+- Backend: `http://backend-service:8080/metrics`
 - PostgreSQL: `http://postgresql-service:9187/metrics`
 - Redis: `http://redis-service:9121/metrics`
 
@@ -521,7 +521,7 @@ sudo systemctl start docker
 **Problem**: Port already in use
 ```bash
 # Find process using port 8000
-lsof -i :8000
+lsof -i :8080
 
 # Kill process
 kill -9 <PID>
@@ -575,7 +575,7 @@ kubectl get pods -n mentalhealth
 
 # Test service internally
 kubectl run -it --rm debug --image=alpine --restart=Never -n mentalhealth -- sh
-wget -O- http://backend-service:8000/health
+wget -O- http://backend-service:8080/health
 ```
 
 **Problem**: Storage issues
@@ -602,7 +602,7 @@ kubectl port-forward -n monitoring svc/prometheus-service 9090:9090
 kubectl get servicemonitor -n mentalhealth
 
 # Check if metrics endpoint is accessible
-kubectl exec -n mentalhealth <backend-pod> -- wget -O- http://localhost:8000/metrics
+kubectl exec -n mentalhealth <backend-pod> -- wget -O- http://localhost:8080/metrics
 ```
 
 **Problem**: Grafana dashboards empty
@@ -630,7 +630,7 @@ After deployment, monitor your application:
 **Local (Docker)**:
 ```bash
 # Backend health
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 
 # View all logs
 docker-compose -f docker-compose.full.yaml logs -f
@@ -648,7 +648,7 @@ kubectl get pods -n mentalhealth -w
 kubectl logs -f -n mentalhealth -l app=backend
 
 # Check pod health
-kubectl exec -n mentalhealth <pod-name> -- wget -O- http://localhost:8000/health
+kubectl exec -n mentalhealth <pod-name> -- wget -O- http://localhost:8080/health
 ```
 
 ### Database Health
@@ -673,7 +673,7 @@ kubectl exec -n mentalhealth <redis-pod> -- redis-cli ping
 
 ### Metrics Endpoints
 
-- Backend Metrics: `http://localhost:8000/metrics`
+- Backend Metrics: `http://localhost:8080/metrics`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3001`
 

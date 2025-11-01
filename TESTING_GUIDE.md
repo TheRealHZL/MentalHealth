@@ -54,7 +54,7 @@ pytest tests/security/
 
 ```bash
 # Backend health
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 
 # Should return:
 # {"status": "healthy", "database": "connected", "redis": "connected"}
@@ -64,7 +64,7 @@ curl http://localhost:8000/health
 
 ```bash
 # Register new user
-curl -X POST http://localhost:8000/api/v1/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -73,7 +73,7 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
   }'
 
 # Login
-curl -X POST http://localhost:8000/api/v1/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -84,7 +84,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 TOKEN="<your-token-here>"
 
 # Use authenticated endpoint
-curl http://localhost:8000/api/v1/users/me \
+curl http://localhost:8080/api/v1/users/me \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -92,12 +92,12 @@ curl http://localhost:8000/api/v1/users/me \
 
 ```bash
 # Create session
-curl -X POST http://localhost:8000/api/v1/sessions \
+curl -X POST http://localhost:8080/api/v1/sessions \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json"
 
 # Send message
-curl -X POST http://localhost:8000/api/v1/chat \
+curl -X POST http://localhost:8080/api/v1/chat \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -110,7 +110,7 @@ curl -X POST http://localhost:8000/api/v1/chat \
 
 1. Import the Postman collection (if provided)
 2. Set environment variables:
-   - `base_url`: http://localhost:8000
+   - `base_url`: http://localhost:8080
    - `token`: (obtained from login)
 3. Run collection tests
 
@@ -119,7 +119,7 @@ curl -X POST http://localhost:8000/api/v1/chat \
 ```python
 import requests
 
-BASE_URL = "http://localhost:8000/api/v1"
+BASE_URL = "http://localhost:8080/api/v1"
 
 # Register
 response = requests.post(
@@ -242,10 +242,10 @@ brew install httpd  # macOS
 apt-get install apache2-utils  # Ubuntu
 
 # Test endpoint
-ab -n 1000 -c 10 http://localhost:8000/health
+ab -n 1000 -c 10 http://localhost:8080/health
 
 # With authentication
-ab -n 1000 -c 10 -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/users/me
+ab -n 1000 -c 10 -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users/me
 ```
 
 ### Using Locust
@@ -282,7 +282,7 @@ class MentalHealthUser(HttpUser):
 EOF
 
 # Run load test
-locust -f locustfile.py --host=http://localhost:8000
+locust -f locustfile.py --host=http://localhost:8080
 ```
 
 Open http://localhost:8089 to configure and start the test.
@@ -305,7 +305,7 @@ Target metrics:
 
 ```bash
 # Test with malicious input
-curl -X POST http://localhost:8000/api/v1/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@example.com OR 1=1--",
@@ -319,7 +319,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 
 ```bash
 # Test with script tags
-curl -X POST http://localhost:8000/api/v1/chat \
+curl -X POST http://localhost:8080/api/v1/chat \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -333,12 +333,12 @@ curl -X POST http://localhost:8000/api/v1/chat \
 
 ```bash
 # Test without token
-curl http://localhost:8000/api/v1/users/me
+curl http://localhost:8080/api/v1/users/me
 
 # Should return 401 Unauthorized
 
 # Test with invalid token
-curl http://localhost:8000/api/v1/users/me \
+curl http://localhost:8080/api/v1/users/me \
   -H "Authorization: Bearer invalid-token"
 
 # Should return 401 Unauthorized
@@ -349,7 +349,7 @@ curl http://localhost:8000/api/v1/users/me \
 ```bash
 # Send many requests quickly
 for i in {1..150}; do
-  curl http://localhost:8000/api/v1/auth/login \
+  curl http://localhost:8080/api/v1/auth/login \
     -H "Content-Type: application/json" \
     -d '{"email":"test@example.com","password":"wrong"}' &
 done
@@ -367,7 +367,7 @@ brew install --cask owasp-zap  # macOS
 # Or download from https://www.zaproxy.org/
 
 # Run automated scan
-zap-cli quick-scan http://localhost:8000
+zap-cli quick-scan http://localhost:8080
 
 # Or use GUI for detailed testing
 ```
@@ -376,7 +376,7 @@ zap-cli quick-scan http://localhost:8000
 
 ```bash
 # Check security headers
-curl -I http://localhost:8000/
+curl -I http://localhost:8080/
 
 # Should include:
 # X-Frame-Options: DENY
@@ -473,7 +473,7 @@ def auth_headers(test_user):
 
 ```bash
 # Check metrics endpoint
-curl http://localhost:8000/metrics
+curl http://localhost:8080/metrics
 
 # View in Prometheus
 open http://localhost:9090
@@ -562,7 +562,7 @@ docker-compose -f docker-compose.full.yaml exec postgres createdb -U mentalhealt
 ```bash
 # Change test ports in docker-compose.test.yaml
 # Or kill processes using ports
-lsof -ti:8000 | xargs kill -9
+lsof -ti:8080 | xargs kill -9
 ```
 
 ---
