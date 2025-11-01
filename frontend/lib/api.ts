@@ -19,7 +19,7 @@ import type {
   PaginatedResponse
 } from '@/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION || 'v1';
 const BASE_URL = `${API_URL}/api/${API_VERSION}`;
 
