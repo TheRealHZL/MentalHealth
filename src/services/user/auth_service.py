@@ -50,11 +50,11 @@ class AuthService:
             await self.db.commit()
             logger.info(f"Last login updated: {user.email}")
 
-    async def log_failed_login(self, user_id: uuid.UUID, email: str) -> None:
+    async def log_failed_login(self, user_id: str, email: str) -> None:
         """Log failed login attempt"""
 
         login_attempt = LoginAttempt(
-            user_id=user_id,
+            user_id=uuid.UUID(user_id),
             email=email,
             successful=False,
             attempted_at=datetime.utcnow(),
