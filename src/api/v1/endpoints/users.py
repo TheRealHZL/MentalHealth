@@ -30,8 +30,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Rate limiting
-auth_rate_limit = create_rate_limit_dependency(limit=5, window_minutes=15)
-general_rate_limit = create_rate_limit_dependency(limit=30, window_minutes=60)
+# More generous limits for development - adjust in production
+auth_rate_limit = create_rate_limit_dependency(limit=20, window_minutes=15)  # 20 attempts in 15min
+general_rate_limit = create_rate_limit_dependency(limit=60, window_minutes=60)  # 60 requests in 1hr
 
 
 @router.post("/register/patient", response_model=TokenResponse)

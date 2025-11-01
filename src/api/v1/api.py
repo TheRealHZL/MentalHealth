@@ -10,7 +10,7 @@ from src.api.v1.endpoints import ai_training  # AI training endpoints
 from src.api.v1.endpoints import context  # User AI context endpoints
 from src.api.v1.endpoints import encryption  # Client-side encryption endpoints
 from src.api.v1.endpoints import thoughts  # therapy notes
-from src.api.v1.endpoints import analytics, dreams, mood, sharing, users
+from src.api.v1.endpoints import admin, analytics, dreams, mood, sharing, users
 
 # Create main v1 router
 api_router = APIRouter()
@@ -25,6 +25,17 @@ api_router.include_router(
         403: {"description": "Forbidden"},
         404: {"description": "Not found"},
         429: {"description": "Too many requests"},
+    },
+)
+
+api_router.include_router(
+    admin.router,
+    prefix="/admin",
+    tags=["admin"],
+    responses={
+        401: {"description": "Unauthorized"},
+        403: {"description": "Forbidden - Admin access required"},
+        404: {"description": "Not found"},
     },
 )
 
