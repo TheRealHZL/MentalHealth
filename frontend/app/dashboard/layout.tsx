@@ -11,6 +11,7 @@ import {
   Heart,
   Moon,
   BarChart3,
+  FileText,
   Settings,
   LogOut,
   Menu,
@@ -72,6 +73,18 @@ export default function DashboardLayout({
       href: '/dashboard/analytics',
       icon: BarChart3,
       current: pathname.startsWith('/dashboard/analytics'),
+    },
+    {
+      name: 'AI Chat',
+      href: '/dashboard/chat',
+      icon: Brain,
+      current: pathname.startsWith('/dashboard/chat'),
+    },
+    {
+      name: 'Therapie',
+      href: '/dashboard/therapy/notes',
+      icon: FileText,
+      current: pathname.startsWith('/dashboard/therapy'),
     },
   ];
 
