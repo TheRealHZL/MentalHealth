@@ -110,15 +110,20 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # BUILD-TIME: Not needed anymore - using relative URLs!
+        NEXT_PUBLIC_API_VERSION: v1
     container_name: mentalhealth-frontend
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      # Use Docker service name for internal communication
-      NEXT_PUBLIC_API_URL: http://backend:8080
+      # RUNTIME Variables
+      NEXT_PUBLIC_API_VERSION: v1
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: 1
+      # Internal API URL for Server-Side proxy (Next.js server → Backend)
+      INTERNAL_API_URL: http://backend:8080
     depends_on:
       - backend
     healthcheck:

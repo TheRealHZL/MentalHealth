@@ -19,9 +19,11 @@ import type {
   PaginatedResponse
 } from '@/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// Use relative URL - Next.js will proxy to backend via rewrites
+// In Docker: Next.js server (running in container) proxies to http://backend:8080
+// Locally: Next.js dev server proxies to http://localhost:8080
 const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION || 'v1';
-const BASE_URL = `${API_URL}/api/${API_VERSION}`;
+const BASE_URL = `/api/${API_VERSION}`;
 
 class ApiClient {
   private client: AxiosInstance;

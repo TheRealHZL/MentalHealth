@@ -16,6 +16,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Accept build arguments (only API_VERSION needed)
+ARG NEXT_PUBLIC_API_VERSION=v1
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -25,6 +28,7 @@ COPY . .
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_VERSION=$NEXT_PUBLIC_API_VERSION
 
 # Build Next.js application
 RUN npm run build
