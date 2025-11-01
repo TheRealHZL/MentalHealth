@@ -230,7 +230,18 @@ update_local() {
 
     # Run database migrations
     log_info "Running database migrations..."
-    alembic upgrade head
+    if ! alembic upgrade head; then
+        log_error "Migration failed!"
+        echo ""
+        echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${YELLOW}Migration Error - See MIGRATIONS_GUIDE.md for help${NC}"
+        echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+        echo -e "${CYAN}Quick Fix:${NC}"
+        echo "  ./fix_migrations.sh"
+        echo ""
+        exit 1
+    fi
 
     # Restart services
     if [[ "$NO_RESTART" == false ]]; then
@@ -281,7 +292,27 @@ update_docker() {
 
     # Run database migrations
     log_info "Running database migrations..."
-    docker-compose exec -T backend alembic upgrade head
+    if ! docker-compose exec -T backend alembic upgrade head; then
+        log_error "Migration failed!"
+        echo ""
+        echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${YELLOW}Migration Error - Common Causes:${NC}"
+        echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+        echo "1. Database tables already exist (most common)"
+        echo "   Solution: Run ./fix_migrations.sh"
+        echo ""
+        echo "2. Migration chain is broken"
+        echo "   Solution: Check MIGRATIONS_GUIDE.md"
+        echo ""
+        echo "3. Database connection issues"
+        echo "   Solution: Check docker-compose logs postgres"
+        echo ""
+        echo -e "${CYAN}Quick Fix:${NC}"
+        echo "  ./fix_migrations.sh"
+        echo ""
+        exit 1
+    fi
 
     # Check health
     if docker-compose ps | grep -q "Up"; then
