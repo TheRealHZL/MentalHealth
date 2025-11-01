@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import (APIRouter, Depends, File, HTTPException, Query, Request,
-                     UploadFile, status)
+                     Response, UploadFile, status)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
@@ -37,6 +37,7 @@ general_rate_limit = create_rate_limit_dependency(limit=60, window_minutes=60)  
 
 @router.post("/register/patient", response_model=TokenResponse)
 async def register_patient(
+    response: Response,
     user_data: UserRegistration,
     request: Request,
     db: AsyncSession = Depends(get_async_session),
@@ -77,6 +78,16 @@ async def register_patient(
         # Access Token erstellen
         access_token = create_access_token(
             data={"sub": str(user.id), "role": "patient"}
+        )
+
+        # Set httpOnly cookie for secure authentication
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=False,  # Set to True in production with HTTPS
+            samesite="lax",
+            max_age=3600 * 24 * 7,  # 7 days
         )
 
         logger.info(f"Patient registered: {user.email}")
@@ -204,6 +215,7 @@ async def register_therapist(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
+    response: Response,
     login_data: UserLogin,
     db: AsyncSession = Depends(get_async_session),
     _rate_limit=Depends(auth_rate_limit),
@@ -252,6 +264,16 @@ async def login(
         # Access Token erstellen
         access_token = create_access_token(
             data={"sub": str(user.id), "role": user.role}
+        )
+
+        # Set httpOnly cookie for secure authentication
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=False,  # Set to True in production with HTTPS
+            samesite="lax",  # CSRF protection
+            max_age=3600 * 24 * 7,  # 7 days
         )
 
         logger.info(f"User logged in: {user.email} ({user.role})")
@@ -610,3 +632,29 @@ async def get_platform_statistics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Plattform-Statistiken konnten nicht geladen werden",
         )
+
+
+@router.post("/logout", response_model=SuccessResponse)
+async def logout(
+    response: Response,
+    user_id: str = Depends(get_current_user_id),
+) -> Dict[str, Any]:
+    """
+    User Logout
+
+    Logs out the user by clearing the httpOnly authentication cookie.
+    """
+    # Clear the httpOnly cookie
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=False,  # Must match the secure flag used when setting the cookie
+        samesite="lax",
+    )
+
+    logger.info(f"User logged out: {user_id}")
+
+    return {
+        "success": True,
+        "message": "Erfolgreich abgemeldet",
+    }
