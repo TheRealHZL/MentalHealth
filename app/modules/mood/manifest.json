@@ -1,0 +1,19 @@
+{
+  "name": "mood",
+  "version": "1.0.0",
+  "description": "Mood tracking and analysis with AI-powered insights",
+  "enabled": true,
+  "routes_prefix": "/api/v1/mood",
+  "tags": ["mood-tracking"],
+  "dependencies": [],
+  "author": "MindBridge Team",
+  "features": [
+    "Create and track mood entries",
+    "AI-powered mood analysis",
+    "Mood patterns and trends",
+    "Activity correlation",
+    "Mood calendar view"
+  ],
+  "database_models": ["MoodEntry"],
+  "permissions": ["authenticated"]
+}

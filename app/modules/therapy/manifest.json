@@ -1,0 +1,10 @@
+{
+  "name": "therapy",
+  "version": "1.0.0",
+  "description": "Therapy module",
+  "enabled": true,
+  "routes_prefix": "/api/v1/therapy",
+  "tags": ["therapy"],
+  "dependencies": [],
+  "author": "MindBridge Team"
+}

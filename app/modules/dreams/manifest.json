@@ -1,0 +1,10 @@
+{
+  "name": "dreams",
+  "version": "1.0.0",
+  "description": "Dreams module",
+  "enabled": true,
+  "routes_prefix": "/api/v1/dreams",
+  "tags": ["dreams"],
+  "dependencies": [],
+  "author": "MindBridge Team"
+}

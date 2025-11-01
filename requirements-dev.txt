@@ -1,0 +1,50 @@
+# Development Dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Code Formatting
+black==23.11.0
+isort==5.12.0
+autopep8==2.0.4
+
+# Linting & Type Checking
+flake8==6.1.0
+pylint==3.0.2
+mypy==1.7.1
+ruff==0.1.6
+
+# Security
+bandit==1.7.5
+safety==2.3.5
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-xdist==3.5.0
+httpx==0.25.2  # For testing FastAPI
+faker==20.1.0  # For generating test data
+
+# Documentation
+mkdocs==1.5.3
+mkdocs-material==9.4.14
+mkdocstrings[python]==0.24.0
+
+# Debugging
+ipython==8.18.1
+ipdb==0.13.13
+pdbpp==0.10.3
+
+# Performance Profiling
+py-spy==0.3.14
+memory-profiler==0.61.0
+line-profiler==4.1.1
+
+# Pre-commit Hooks
+pre-commit==3.5.0
+
+# Database Tools
+alembic==1.13.1
+
+# Environment Management
+python-dotenv==1.0.0

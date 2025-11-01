@@ -1,0 +1,10 @@
+{
+  "name": "analytics",
+  "version": "1.0.0",
+  "description": "Analytics module",
+  "enabled": true,
+  "routes_prefix": "/api/v1/analytics",
+  "tags": ["analytics"],
+  "dependencies": [],
+  "author": "MindBridge Team"
+}

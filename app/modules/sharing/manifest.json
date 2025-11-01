@@ -1,0 +1,10 @@
+{
+  "name": "sharing",
+  "version": "1.0.0",
+  "description": "Sharing module",
+  "enabled": true,
+  "routes_prefix": "/api/v1/sharing",
+  "tags": ["sharing"],
+  "dependencies": [],
+  "author": "MindBridge Team"
+}
