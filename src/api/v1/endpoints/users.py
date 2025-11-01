@@ -226,7 +226,7 @@ async def login(
         # Passwort prüfen
         if not verify_password(login_data.password, user.password_hash):
             # Login-Versuch loggen
-            await user_service.log_failed_login(user.id, login_data.email)
+            await user_service.log_failed_login(str(user.id), login_data.email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Ungültige Anmeldedaten",
@@ -246,7 +246,7 @@ async def login(
             )
 
         # Letzten Login aktualisieren
-        await user_service.update_last_login(user.id)
+        await user_service.update_last_login(str(user.id))
 
         # Access Token erstellen
         access_token = create_access_token(
