@@ -73,6 +73,12 @@ export default function DashboardLayout({
       icon: BarChart3,
       current: pathname.startsWith('/dashboard/analytics'),
     },
+    {
+      name: 'AI Chat',
+      href: '/dashboard/chat',
+      icon: Brain,
+      current: pathname.startsWith('/dashboard/chat'),
+    },
   ];
 
   return (

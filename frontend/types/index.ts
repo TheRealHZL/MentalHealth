@@ -158,19 +158,31 @@ export interface AIMoodAnalysis {
 }
 
 export interface AIChatMessage {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
 }
 
+export interface AIChatSession {
+  id: string;
+  title: string;
+  messages: AIChatMessage[];
+  created_at: string;
+  updated_at: string;
+  last_message_preview?: string;
+}
+
 export interface AIChatRequest {
   message: string;
   context?: string;
+  session_id?: string;
 }
 
 export interface AIChatResponse {
   response: string;
   timestamp: string;
+  session_id?: string;
 }
 
 // API Response Types
