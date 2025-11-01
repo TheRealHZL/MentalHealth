@@ -5,6 +5,10 @@ import type {
   RegisterPatientRequest,
   RegisterTherapistRequest,
   User,
+  UpdateProfileRequest,
+  ChangePasswordRequest,
+  NotificationPreferences,
+  PrivacySettings,
   MoodEntry,
   CreateMoodRequest,
   DreamEntry,
@@ -120,6 +124,44 @@ class ApiClient {
         window.location.href = '/login';
       }
     }
+  }
+
+  // User Settings Endpoints
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    await this.client.put('/users/change-password', data);
+  }
+
+  async uploadAvatar(file: File): Promise<User> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const response = await this.client.post<User>('/users/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    // Update local user data
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(response.data));
+    }
+    return response.data;
+  }
+
+  async getNotificationPreferences(): Promise<NotificationPreferences> {
+    const response = await this.client.get<NotificationPreferences>('/users/notifications');
+    return response.data;
+  }
+
+  async updateNotificationPreferences(data: NotificationPreferences): Promise<NotificationPreferences> {
+    const response = await this.client.put<NotificationPreferences>('/users/notifications', data);
+    return response.data;
+  }
+
+  async getPrivacySettings(): Promise<PrivacySettings> {
+    const response = await this.client.get<PrivacySettings>('/users/privacy');
+    return response.data;
+  }
+
+  async updatePrivacySettings(data: PrivacySettings): Promise<PrivacySettings> {
+    const response = await this.client.put<PrivacySettings>('/users/privacy', data);
+    return response.data;
   }
 
   // Mood Endpoints

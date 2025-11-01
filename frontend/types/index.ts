@@ -7,6 +7,35 @@ export interface User {
   role: 'patient' | 'therapist' | 'admin';
   is_verified: boolean;
   created_at: string;
+  avatar_url?: string;
+  timezone?: string;
+  language?: string;
+}
+
+export interface UpdateProfileRequest {
+  first_name?: string;
+  last_name?: string;
+  timezone?: string;
+  language?: string;
+}
+
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
+export interface NotificationPreferences {
+  email_notifications: boolean;
+  push_notifications: boolean;
+  therapy_reminders: boolean;
+  mood_tracking_reminders: boolean;
+  weekly_insights: boolean;
+}
+
+export interface PrivacySettings {
+  profile_visibility: 'public' | 'private' | 'therapist_only';
+  share_analytics: boolean;
+  data_export_enabled: boolean;
 }
 
 // Auth Types
