@@ -42,11 +42,9 @@ export default function LoginPage() {
       // Redirect based on role
       if (response.user.role === 'admin') {
         router.push('/admin');
-      } else if (response.user.role === 'patient') {
-        router.push('/dashboard');
       } else if (response.user.role === 'therapist') {
-        // Therapists also use the main dashboard for now
-        // TODO: Create dedicated /therapist dashboard if needed
+        router.push('/therapist');
+      } else if (response.user.role === 'patient') {
         router.push('/dashboard');
       } else {
         // Fallback for unknown roles
