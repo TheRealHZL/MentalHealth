@@ -1,8 +1,8 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import type { 
-  AuthResponse, 
-  LoginRequest, 
-  RegisterPatientRequest, 
+import type {
+  AuthResponse,
+  LoginRequest,
+  RegisterPatientRequest,
   RegisterTherapistRequest,
   User,
   MoodEntry,
@@ -13,6 +13,10 @@ import type {
   MoodTrend,
   OverviewStats,
   WellnessScore,
+  MoodPatterns,
+  ActivityCorrelation,
+  WeeklyInsight,
+  MonthlyInsight,
   AIMoodAnalysis,
   AIChatRequest,
   AIChatResponse,
@@ -173,6 +177,26 @@ class ApiClient {
 
   async getWellnessScore(): Promise<WellnessScore> {
     const response = await this.client.get<WellnessScore>('/analytics/wellness-score');
+    return response.data;
+  }
+
+  async getMoodPatterns(): Promise<MoodPatterns> {
+    const response = await this.client.get<MoodPatterns>('/analytics/mood/patterns');
+    return response.data;
+  }
+
+  async getMoodCorrelations(): Promise<ActivityCorrelation[]> {
+    const response = await this.client.get<ActivityCorrelation[]>('/analytics/mood/correlations');
+    return response.data;
+  }
+
+  async getWeeklyInsights(): Promise<WeeklyInsight> {
+    const response = await this.client.get<WeeklyInsight>('/analytics/insights/weekly');
+    return response.data;
+  }
+
+  async getMonthlyInsights(): Promise<MonthlyInsight> {
+    const response = await this.client.get<MonthlyInsight>('/analytics/insights/monthly');
     return response.data;
   }
 
