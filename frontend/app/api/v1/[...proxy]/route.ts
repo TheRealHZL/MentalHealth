@@ -108,7 +108,18 @@ async function handleRequest(request: NextRequest, method: string) {
     if (setCookies.length > 0) {
       setCookies.forEach((cookie: string) => {
         console.log(`[API Proxy] Cookie from backend: ${cookie.substring(0, 100)}...`);
-        response.headers.append('Set-Cookie', cookie);
+
+        // IMPORTANT: Remove 'Domain' attribute if present
+        // The cookie should be set for the current domain (localhost:3000)
+        // not for the backend domain (backend:8080)
+        let modifiedCookie = cookie;
+        if (modifiedCookie.includes('Domain=')) {
+          // Remove Domain attribute
+          modifiedCookie = modifiedCookie.replace(/;\s*Domain=[^;]+/gi, '');
+          console.log(`[API Proxy] Removed Domain attribute from cookie`);
+        }
+
+        response.headers.append('Set-Cookie', modifiedCookie);
       });
       console.log(`[API Proxy] Forwarding ${setCookies.length} cookies to client`);
     } else {
@@ -116,16 +127,28 @@ async function handleRequest(request: NextRequest, method: string) {
       const setCookieHeader = backendResponse.headers.get('set-cookie');
       if (setCookieHeader) {
         console.log(`[API Proxy] Cookie from backend (fallback): ${setCookieHeader.substring(0, 100)}...`);
-        response.headers.append('Set-Cookie', setCookieHeader);
+
+        // Remove Domain attribute if present
+        let modifiedCookie = setCookieHeader;
+        if (modifiedCookie.includes('Domain=')) {
+          modifiedCookie = modifiedCookie.replace(/;\s*Domain=[^;]+/gi, '');
+          console.log(`[API Proxy] Removed Domain attribute from cookie`);
+        }
+
+        response.headers.append('Set-Cookie', modifiedCookie);
         console.log(`[API Proxy] Forwarding cookie (fallback method)`);
       } else {
         console.log(`[API Proxy] No Set-Cookie header found in backend response`);
       }
     }
 
-    // Ensure CORS headers are set for development
-    response.headers.set('Access-Control-Allow-Origin', request.headers.get('origin') || '*');
-    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    // Set CORS headers for development
+    // IMPORTANT: Cannot use '*' with credentials: true
+    const origin = request.headers.get('origin');
+    if (origin) {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
+    }
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
 
@@ -163,14 +186,21 @@ export async function PATCH(request: NextRequest) {
 
 export async function OPTIONS(request: NextRequest) {
   // Handle CORS preflight requests
+  const origin = request.headers.get('origin');
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
+    'Access-Control-Max-Age': '86400', // 24 hours
+  };
+
+  // Only set origin and credentials if origin is present
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
+
   return new NextResponse(null, {
     status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': request.headers.get('origin') || '*',
-      'Access-Control-Allow-Credentials': 'true',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-      'Access-Control-Max-Age': '86400', // 24 hours
-    },
+    headers,
   });
 }
