@@ -16,15 +16,15 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_async_session
-from src.core.security import create_rate_limit_dependency, get_current_user_id
-from src.models.encrypted_models import EncryptedDreamEntry
-from src.schemas.ai import (DreamEntryCreate, DreamEntryResponse,
+from app.core.database import get_async_session
+from app.core.security import create_rate_limit_dependency, get_current_user_id
+from app.models.encrypted_models import EncryptedDreamEntry
+from app.schemas.ai import (DreamEntryCreate, DreamEntryResponse,
                             DreamEntryUpdate, PaginatedResponse,
                             PaginationParams, SuccessResponse)
-from src.services.ai_integration_service import AIIntegrationService
-from src.services.dream_service import DreamService
-from src.services.encryption_service import EncryptionService
+from app.services.ai_integration_service import AIIntegrationService
+from app.services.dream_service import DreamService
+from app.services.encryption_service import EncryptionService
 
 logger = logging.getLogger(__name__)
 

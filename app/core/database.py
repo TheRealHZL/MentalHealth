@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.pool import NullPool
 
-from src.core.config import get_settings
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -81,7 +81,7 @@ async def init_database():
         logger.info("🗃️ Initializing PostgreSQL database...")
 
         # Import all models to ensure they're registered
-        from src.models import ALL_MODELS
+        from app.models import ALL_MODELS
 
         # Test connection
         async with async_engine.begin() as conn:

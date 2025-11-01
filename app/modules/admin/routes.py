@@ -12,12 +12,12 @@ from pydantic import BaseModel
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_async_session
-from src.core.security import get_current_user_id, require_admin
-from src.models.chat import ChatMessage, ChatSession
-from src.models.training import ModelVersion, TrainingDataset, TrainingJob
-from src.models.user_models import User, UserRole
-from src.schemas.user import UserResponse
+from app.core.database import get_async_session
+from app.core.security import get_current_user_id, require_admin
+from app.models.chat import ChatMessage, ChatSession
+from app.models.training import ModelVersion, TrainingDataset, TrainingJob
+from app.models.user_models import User, UserRole
+from app.schemas.user import UserResponse
 
 router = APIRouter()
 

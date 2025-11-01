@@ -13,17 +13,17 @@ from fastapi import (APIRouter, Depends, File, HTTPException, Query, Request,
                      UploadFile, status)
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_async_session
-from src.core.security import (create_access_token,
+from app.core.database import get_async_session
+from app.core.security import (create_access_token,
                                create_rate_limit_dependency,
                                get_current_user_id, hash_password,
                                verify_password)
-from src.schemas.ai import (PasswordChange, SuccessResponse,
+from app.schemas.ai import (PasswordChange, SuccessResponse,
                             TherapistRegistration, TherapistVerification,
                             TokenResponse, UserLogin, UserProfileResponse,
                             UserProfileUpdate, UserRegistration)
-from src.services.email_service import EmailService
-from src.services.user_service import UserService
+from app.services.email_service import EmailService
+from app.services.user_service import UserService
 
 logger = logging.getLogger(__name__)
 

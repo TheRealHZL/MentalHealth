@@ -13,13 +13,13 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_async_session
-from src.core.security import create_rate_limit_dependency, get_current_user_id
-from src.schemas.ai import (PaginatedResponse, PaginationParams,
+from app.core.database import get_async_session
+from app.core.security import create_rate_limit_dependency, get_current_user_id
+from app.schemas.ai import (PaginatedResponse, PaginationParams,
                             PatientOverview, ShareKeyCreate, ShareKeyResponse,
                             SuccessResponse, TherapistAccessRequest)
-from src.services.sharing_service import SharingService
-from src.services.user_service import UserService
+from app.services.sharing_service import SharingService
+from app.services.user_service import UserService
 
 logger = logging.getLogger(__name__)
 

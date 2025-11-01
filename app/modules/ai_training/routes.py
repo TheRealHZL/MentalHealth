@@ -16,18 +16,18 @@ from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form,
                      HTTPException, UploadFile, status)
 from fastapi.responses import JSONResponse
 
-from src.ai.engine import AIEngine
-from src.core.config import get_settings
-from src.core.database import get_async_session
-from src.core.security import get_current_user_id, get_current_user_role
-from src.models.training import ModelVersion, TrainingDataset, TrainingJob
-from src.schemas.ai import (ErrorResponse, ModelEvaluationRequest,
+from app.ai.engine import AIEngine
+from app.core.config import get_settings
+from app.core.database import get_async_session
+from app.core.security import get_current_user_id, get_current_user_role
+from app.models.training import ModelVersion, TrainingDataset, TrainingJob
+from app.schemas.ai import (ErrorResponse, ModelEvaluationRequest,
                             ModelTrainingRequest, ModelTrainingResponse,
                             ModelVersionResponse, PaginatedResponse,
                             SuccessResponse, TrainingDatasetCreate,
                             TrainingDatasetResponse, TrainingDataUpload,
                             TrainingJobStatus, TrainingMetrics)
-from src.schemas.chat import (ChatModelEvaluationRequest,
+from app.schemas.chat import (ChatModelEvaluationRequest,
                               ChatModelEvaluationResponse,
                               ChatModelTrainingRequest,
                               ChatModelTrainingResponse,

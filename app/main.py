@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
 
         # Initialize AI Engine (if available)
         try:
-            from src.ai.engine import AIEngine
+            from app.ai.engine import AIEngine
 
             ai_engine = AIEngine()
             await ai_engine.initialize()
@@ -75,7 +75,7 @@ async def lifespan(app: FastAPI):
             logger.warning(f"⚠️  AI Engine initialization failed: {e}")
             logger.warning("⚠️  AI features will be disabled. Train models first.")
             # Create engine but don't initialize to allow training endpoints
-            from src.ai.engine import AIEngine
+            from app.ai.engine import AIEngine
             app.state.ai_engine = AIEngine()
             app.state.ai_engine.is_initialized = False
 

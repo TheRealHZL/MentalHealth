@@ -16,15 +16,15 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_async_session
-from src.core.security import create_rate_limit_dependency, get_current_user_id
-from src.models.encrypted_models import EncryptedMoodEntry
-from src.schemas.ai import (MoodEntryCreate, MoodEntryResponse,
+from app.core.database import get_async_session
+from app.core.security import create_rate_limit_dependency, get_current_user_id
+from app.models.encrypted_models import EncryptedMoodEntry
+from app.schemas.ai import (MoodEntryCreate, MoodEntryResponse,
                             MoodEntryUpdate, PaginatedResponse,
                             PaginationParams, SuccessResponse)
-from src.services.analytics_service import AnalyticsService
-from src.services.encryption_service import EncryptionService
-from src.services.mood_service import MoodService
+from app.services.analytics_service import AnalyticsService
+from app.services.encryption_service import EncryptionService
+from app.services.mood_service import MoodService
 
 logger = logging.getLogger(__name__)
 

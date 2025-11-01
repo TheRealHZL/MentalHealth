@@ -10,10 +10,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_async_session
-from src.core.security import get_current_user_id, require_patient_or_therapist
-from src.services.analytics_service import AnalyticsService
-from src.services.mood_analytics_service import MoodAnalyticsService
+from app.core.database import get_async_session
+from app.core.security import get_current_user_id, require_patient_or_therapist
+from app.services.analytics_service import AnalyticsService
+from app.services.mood_analytics_service import MoodAnalyticsService
 
 router = APIRouter()
 
