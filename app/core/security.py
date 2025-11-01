@@ -265,7 +265,10 @@ def create_rate_limit_dependency(limit: int = 30, window_minutes: int = 60):
 
 from fastapi import Depends
 
-security_scheme = HTTPBearer()
+# CRITICAL: auto_error=False allows cookie-based authentication
+# Without this, FastAPI throws 403 when no Authorization header is present,
+# preventing cookie extraction!
+security_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user_id(
@@ -281,13 +284,20 @@ async def get_current_user_id(
     """
     token = None
 
+    # Debug: Log all available cookies
+    logger.debug(f"Available cookies: {list(request.cookies.keys())}")
+
     # Priority 1: Try to get token from httpOnly cookie (more secure!)
     if "access_token" in request.cookies:
         token = request.cookies.get("access_token")
+        logger.debug(f"Found access_token cookie: {token[:20]}..." if token else "Empty token")
 
     # Priority 2: Fallback to Authorization header (backward compatibility)
     elif credentials:
         token = credentials.credentials
+        logger.debug(f"Using Authorization header token")
+    else:
+        logger.warning(f"No token found in cookies or Authorization header")
 
     # No token found
     if not token:
@@ -301,6 +311,7 @@ async def get_current_user_id(
     payload = verify_token(token)
 
     if not payload:
+        logger.warning(f"Token verification failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
@@ -309,12 +320,14 @@ async def get_current_user_id(
 
     user_id = payload.get("sub")
     if not user_id:
+        logger.warning(f"Token missing 'sub' claim")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    logger.debug(f"Successfully authenticated user: {user_id}")
     return user_id
 
 
