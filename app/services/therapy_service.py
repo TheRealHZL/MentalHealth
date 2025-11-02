@@ -646,3 +646,192 @@ Was hat funktioniert? Was würde ich anders machen?"""
             return "Du bleibst konsequent dran - das ist der Schlüssel zum Erfolg! 💪"
         else:
             return "Du machst wichtige Scschritte in deiner Entwicklung! Weiter so! ⭐"
+
+    async def get_therapy_notes_paginated(
+        self,
+        user_id: str,
+        pagination: PaginationParams,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        note_type: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> Tuple[List[TherapyNote], int]:
+        """Get therapy notes with pagination and filters"""
+
+        # Build query conditions
+        conditions = [TherapyNote.user_id == uuid.UUID(user_id)]
+
+        if start_date:
+            conditions.append(TherapyNote.note_date >= start_date)
+        if end_date:
+            conditions.append(TherapyNote.note_date <= end_date)
+        if note_type:
+            conditions.append(TherapyNote.note_type == note_type)
+        if search:
+            conditions.append(
+                TherapyNote.title.ilike(f"%{search}%") | TherapyNote.content.ilike(f"%{search}%")
+            )
+
+        # Get total count
+        count_query = select(func.count(TherapyNote.id)).where(and_(*conditions))
+        count_result = await self.db.execute(count_query)
+        total_count = count_result.scalar() or 0
+
+        # Get paginated results
+        offset = (pagination.page - 1) * pagination.page_size
+        query = (
+            select(TherapyNote)
+            .where(and_(*conditions))
+            .order_by(desc(TherapyNote.note_date))
+            .limit(pagination.page_size)
+            .offset(offset)
+        )
+
+        result = await self.db.execute(query)
+        entries = list(result.scalars().all())
+
+        return entries, total_count
+
+    async def update_therapy_note(
+        self, note_id: str, user_id: str, update_data: TherapyNoteUpdate
+    ) -> TherapyNote:
+        """Update therapy note"""
+
+        result = await self.db.execute(
+            select(TherapyNote).where(
+                and_(
+                    TherapyNote.id == uuid.UUID(note_id),
+                    TherapyNote.user_id == uuid.UUID(user_id),
+                )
+            )
+        )
+        therapy_note = result.scalar_one_or_none()
+
+        if not therapy_note:
+            raise ValueError("Therapy note not found")
+
+        # Update fields
+        update_dict = update_data.dict(exclude_unset=True)
+        for field, value in update_dict.items():
+            if hasattr(therapy_note, field):
+                setattr(therapy_note, field, value)
+
+        await self.db.commit()
+        await self.db.refresh(therapy_note)
+
+        return therapy_note
+
+    async def delete_therapy_note(self, note_id: str, user_id: str) -> None:
+        """Delete therapy note"""
+
+        result = await self.db.execute(
+            select(TherapyNote).where(
+                and_(
+                    TherapyNote.id == uuid.UUID(note_id),
+                    TherapyNote.user_id == uuid.UUID(user_id),
+                )
+            )
+        )
+        therapy_note = result.scalar_one_or_none()
+
+        if not therapy_note:
+            raise ValueError("Therapy note not found")
+
+        await self.db.delete(therapy_note)
+        await self.db.commit()
+
+    async def get_therapy_statistics(self, user_id: str, days: int) -> Dict[str, Any]:
+        """Get therapy statistics for a time period"""
+
+        start_date = datetime.now() - timedelta(days=days)
+
+        result = await self.db.execute(
+            select(TherapyNote)
+            .where(
+                and_(
+                    TherapyNote.user_id == uuid.UUID(user_id),
+                    TherapyNote.created_at >= start_date,
+                )
+            )
+            .order_by(TherapyNote.note_date)
+        )
+
+        notes = list(result.scalars().all())
+
+        return {
+            "total_notes": len(notes),
+            "note_types": dict(Counter(note.note_type.value for note in notes)),
+            "avg_mood": (
+                round(
+                    sum(n.mood_before_session for n in notes if n.mood_before_session)
+                    / len([n for n in notes if n.mood_before_session]),
+                    1,
+                )
+                if any(n.mood_before_session for n in notes)
+                else None
+            ),
+        }
+
+    async def analyze_goal_progress(self, user_id: str) -> Dict[str, Any]:
+        """Analyze goal progress"""
+
+        result = await self.db.execute(
+            select(TherapyNote)
+            .where(TherapyNote.user_id == uuid.UUID(user_id))
+            .order_by(desc(TherapyNote.note_date))
+            .limit(50)
+        )
+
+        notes = list(result.scalars().all())
+
+        all_goals = []
+        for note in notes:
+            if note.goals_discussed:
+                all_goals.extend(note.goals_discussed)
+
+        return {
+            "total_goals": len(all_goals),
+            "common_goals": dict(Counter(all_goals).most_common(5)),
+        }
+
+    async def analyze_insight_patterns(self, user_id: str) -> Dict[str, Any]:
+        """Analyze insight patterns"""
+
+        result = await self.db.execute(
+            select(TherapyNote)
+            .where(TherapyNote.user_id == uuid.UUID(user_id))
+            .order_by(desc(TherapyNote.note_date))
+            .limit(50)
+        )
+
+        notes = list(result.scalars().all())
+
+        all_insights = []
+        for note in notes:
+            if note.key_insights:
+                all_insights.extend(note.key_insights)
+
+        return {
+            "total_insights": len(all_insights),
+            "recent_insights": all_insights[:10] if all_insights else [],
+        }
+
+    def build_progress_summary(self, progress: Dict[str, Any]) -> str:
+        """Build progress summary for AI"""
+
+        total_notes = progress.get("total_notes", 0)
+        avg_mood_before = progress.get("avg_mood_before")
+        avg_mood_after = progress.get("avg_mood_after")
+        mood_improvement = progress.get("mood_improvement")
+
+        summary = f"Therapie-Fortschritt:\n"
+        summary += f"- {total_notes} Notizen erstellt\n"
+
+        if avg_mood_before:
+            summary += f"- Durchschnittliche Stimmung vorher: {avg_mood_before}/10\n"
+        if avg_mood_after:
+            summary += f"- Durchschnittliche Stimmung nachher: {avg_mood_after}/10\n"
+        if mood_improvement:
+            summary += f"- Stimmungsverbesserung: {mood_improvement} Punkte\n"
+
+        return summary
