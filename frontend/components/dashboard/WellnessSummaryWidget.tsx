@@ -70,7 +70,7 @@ export function WellnessSummaryWidget() {
     )
   }
 
-  if (!wellnessData) return null
+  if (!wellnessData || !wellnessData.factors) return null
 
   const scoreColor =
     wellnessData.score >= 75
@@ -78,6 +78,8 @@ export function WellnessSummaryWidget() {
       : wellnessData.score >= 50
       ? 'text-yellow-600 dark:text-yellow-400'
       : 'text-red-600 dark:text-red-400'
+
+  const factors = wellnessData.factors || { mood: 0, energy: 0, sleep: 0, stress: 0 }
 
   return (
     <Card className="h-full">
@@ -106,12 +108,12 @@ export function WellnessSummaryWidget() {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Stimmung</span>
-              <span className="font-medium">{wellnessData.factors.mood}%</span>
+              <span className="font-medium">{factors.mood ?? 0}%</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-500 transition-all"
-                style={{ width: `${wellnessData.factors.mood}%` }}
+                style={{ width: `${factors.mood ?? 0}%` }}
               />
             </div>
           </div>
@@ -119,12 +121,12 @@ export function WellnessSummaryWidget() {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Energie</span>
-              <span className="font-medium">{wellnessData.factors.energy}%</span>
+              <span className="font-medium">{factors.energy ?? 0}%</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-green-500 transition-all"
-                style={{ width: `${wellnessData.factors.energy}%` }}
+                style={{ width: `${factors.energy ?? 0}%` }}
               />
             </div>
           </div>
@@ -132,12 +134,12 @@ export function WellnessSummaryWidget() {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Schlaf</span>
-              <span className="font-medium">{wellnessData.factors.sleep}%</span>
+              <span className="font-medium">{factors.sleep ?? 0}%</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-purple-500 transition-all"
-                style={{ width: `${wellnessData.factors.sleep}%` }}
+                style={{ width: `${factors.sleep ?? 0}%` }}
               />
             </div>
           </div>
@@ -145,12 +147,12 @@ export function WellnessSummaryWidget() {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Stress (niedrig ist besser)</span>
-              <span className="font-medium">{wellnessData.factors.stress}%</span>
+              <span className="font-medium">{factors.stress ?? 0}%</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-red-500 transition-all"
-                style={{ width: `${wellnessData.factors.stress}%` }}
+                style={{ width: `${factors.stress ?? 0}%` }}
               />
             </div>
           </div>
