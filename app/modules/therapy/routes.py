@@ -179,6 +179,156 @@ async def get_therapy_notes(
         )
 
 
+@router.get("/notes", response_model=PaginatedResponse)
+async def get_therapy_notes_alt(
+    pagination: PaginationParams = Depends(),
+    start_date: Optional[date] = Query(None, description="Start date filter"),
+    end_date: Optional[date] = Query(None, description="End date filter"),
+    note_type: Optional[str] = Query(None, description="Note type filter"),
+    search: Optional[str] = Query(None, description="Search in title and content"),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session),
+) -> Dict[str, Any]:
+    """
+    Get Therapy Notes (alternative /notes endpoint)
+
+    Holt alle Therapie-Notizen mit Filteroptionen.
+    """
+    try:
+        therapy_service = TherapyService(db)
+
+        # Notes mit Filtern holen
+        entries, total_count = await therapy_service.get_therapy_notes_paginated(
+            user_id=user_id,
+            pagination=pagination,
+            start_date=start_date,
+            end_date=end_date,
+            note_type=note_type,
+            search=search,
+        )
+
+        # Pagination berechnen
+        total_pages = (total_count + pagination.page_size - 1) // pagination.page_size
+        has_next = pagination.page < total_pages
+        has_prev = pagination.page > 1
+
+        return {
+            "items": entries,
+            "total": total_count,
+            "page": pagination.page,
+            "page_size": pagination.page_size,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev,
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get therapy notes: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Therapie-Notizen konnten nicht geladen werden",
+        )
+
+
+@router.get("/sessions", response_model=PaginatedResponse)
+async def get_therapy_sessions(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(10, ge=1, le=100, description="Page size"),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session),
+) -> Dict[str, Any]:
+    """
+    Get Therapy Sessions
+
+    Ruft geplante und vergangene Therapiesitzungen ab.
+    """
+    try:
+        therapy_service = TherapyService(db)
+
+        # Get therapy notes of type 'session'
+        from app.schemas.ai import PaginationParams
+        pagination = PaginationParams(page=page, page_size=size)
+
+        entries, total_count = await therapy_service.get_therapy_notes_paginated(
+            user_id=user_id,
+            pagination=pagination,
+            note_type="session",
+        )
+
+        # Pagination berechnen
+        total_pages = (total_count + size - 1) // size
+        has_next = page < total_pages
+        has_prev = page > 1
+
+        return {
+            "items": entries,
+            "total": total_count,
+            "page": page,
+            "page_size": size,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev,
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get therapy sessions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Therapiesitzungen konnten nicht geladen werden",
+        )
+
+
+@router.get("/techniques")
+async def get_therapy_techniques(
+    user_id: str = Depends(get_current_user_id),
+) -> List[Dict[str, Any]]:
+    """
+    Get Therapy Techniques
+
+    Ruft verfügbare Therapietechniken und Selbsthilfe-Tools ab.
+    """
+    # Return common therapy techniques
+    techniques = [
+        {
+            "id": "cbt-thought-record",
+            "name": "Gedankenprotokoll (CBT)",
+            "description": "Identifiziere und hinterfrage negative Gedankenmuster",
+            "category": "cognitive-behavioral",
+            "duration_minutes": 15,
+        },
+        {
+            "id": "mindfulness-breathing",
+            "name": "Achtsame Atmung",
+            "description": "Beruhigende Atemübung für Stressabbau",
+            "category": "mindfulness",
+            "duration_minutes": 10,
+        },
+        {
+            "id": "progressive-relaxation",
+            "name": "Progressive Muskelentspannung",
+            "description": "Systematische Entspannung aller Muskelgruppen",
+            "category": "relaxation",
+            "duration_minutes": 20,
+        },
+        {
+            "id": "gratitude-journal",
+            "name": "Dankbarkeitstagebuch",
+            "description": "Reflektiere täglich über positive Erlebnisse",
+            "category": "positive-psychology",
+            "duration_minutes": 10,
+        },
+        {
+            "id": "worry-time",
+            "name": "Sorgenzeit",
+            "description": "Begrenze Grübeln auf festgelegte Zeiten",
+            "category": "anxiety-management",
+            "duration_minutes": 15,
+        },
+    ]
+
+    return techniques
+
+
 @router.get("/{note_id}", response_model=TherapyNoteResponse)
 async def get_therapy_note(
     note_id: str,

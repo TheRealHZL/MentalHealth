@@ -458,6 +458,7 @@ class TherapyNote(Base):
 
     # Relationships
     user = relationship("User", back_populates="therapy_notes")
+    calendar_events = relationship("CalendarEvent", back_populates="therapy_note")
 
     def __repr__(self):
         return f"<TherapyNote(id={self.id}, user_id={self.user_id}, type={self.note_type}, date={self.note_date})>"

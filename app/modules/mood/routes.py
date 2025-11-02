@@ -87,17 +87,6 @@ async def create_mood_entry(
     try:
         mood_service = MoodService(db)
 
-        # Prüfen ob bereits Eintrag für heute existiert
-        existing_entry = await mood_service.get_mood_entry_by_date(
-            user_id, mood_data.date, mood_data.time
-        )
-
-        if existing_entry:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Stimmungseintrag für diese Zeit existiert bereits",
-            )
-
         # Mood Entry erstellen
         mood_entry = await mood_service.create_mood_entry(
             user_id=user_id, mood_data=mood_data

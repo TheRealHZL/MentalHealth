@@ -238,3 +238,108 @@ class AnalyticsService:
                 "📱 Nutze unseren KI-Chat für sofortige Hilfe",
             ],
         }
+
+    async def calculate_wellness_score(
+        self, user_id: Union[str, uuid.UUID], start_date: datetime
+    ) -> Dict[str, Any]:
+        """Calculate overall wellness score"""
+        if isinstance(user_id, str):
+            user_id = uuid.UUID(user_id)
+
+        # Get mood entries for period
+        result = await self.db.execute(
+            select(MoodEntry)
+            .where(
+                and_(
+                    MoodEntry.user_id == user_id,
+                    MoodEntry.created_at >= start_date
+                )
+            )
+            .order_by(asc(MoodEntry.entry_date))
+        )
+        entries = list(result.scalars().all())
+
+        if not entries:
+            return {
+                "score": 50,
+                "category": "neutral",
+                "trend": "no_data",
+                "message": "Nicht genug Daten verfügbar. Beginne mit dem Tracking!",
+                "components": {
+                    "mood": 50,
+                    "sleep": 50,
+                    "energy": 50,
+                    "consistency": 0,
+                }
+            }
+
+        # Calculate average scores
+        avg_mood = sum(e.mood_score for e in entries) / len(entries) * 10
+        avg_energy = sum(e.energy_level for e in entries) / len(entries) * 10
+
+        # Sleep score
+        sleep_entries = [e for e in entries if e.sleep_quality is not None]
+        avg_sleep = (sum(e.sleep_quality for e in sleep_entries) / len(sleep_entries) * 10) if sleep_entries else 50
+
+        # Consistency score (based on tracking frequency)
+        days_range = (datetime.now() - start_date).days
+        consistency = min(100, (len(entries) / days_range) * 100) if days_range > 0 else 0
+
+        # Overall wellness score (weighted average)
+        wellness_score = (
+            avg_mood * 0.35 +
+            avg_sleep * 0.25 +
+            avg_energy * 0.25 +
+            consistency * 0.15
+        )
+
+        # Determine category
+        if wellness_score >= 75:
+            category = "excellent"
+        elif wellness_score >= 60:
+            category = "good"
+        elif wellness_score >= 40:
+            category = "fair"
+        else:
+            category = "needs_attention"
+
+        return {
+            "score": round(wellness_score, 1),
+            "category": category,
+            "trend": "stable",
+            "components": {
+                "mood": round(avg_mood, 1),
+                "sleep": round(avg_sleep, 1),
+                "energy": round(avg_energy, 1),
+                "consistency": round(consistency, 1),
+            },
+            "entries_count": len(entries),
+            "period_days": days_range,
+        }
+
+    async def get_user_analytics_overview(
+        self, user_id: Union[str, uuid.UUID]
+    ) -> Dict[str, Any]:
+        """Get comprehensive analytics overview"""
+        if isinstance(user_id, str):
+            user_id = uuid.UUID(user_id)
+
+        # Get data for last 30 days
+        start_date = datetime.now() - timedelta(days=30)
+
+        # Get mood trend
+        mood_trend = await self.get_mood_trend(user_id, days=30)
+
+        # Get wellness score
+        wellness = await self.calculate_wellness_score(user_id, start_date)
+
+        # Get achievements
+        achievements = await self.get_achievements(user_id)
+
+        return {
+            "wellness_score": wellness,
+            "mood_trend": mood_trend,
+            "achievements": achievements,
+            "insights_count": len(achievements),
+            "last_updated": datetime.now().isoformat(),
+        }

@@ -4,6 +4,8 @@ Models Package
 Zentrale Imports für alle Datenbank-Modelle.
 """
 
+# Calendar Models
+from .calendar import CalendarEvent, EventType, RecurrencePattern
 # Chat Models
 from .chat import (ChatAnalysis, ChatMessage, ChatSession, ChatTemplate,
                    ConversationFlow)
@@ -42,6 +44,10 @@ __all__ = [
     "UserContext",
     "AIConversationHistory",
     "UserAIPreferences",
+    # Calendar models
+    "CalendarEvent",
+    "EventType",
+    "RecurrencePattern",
     # Content models
     "MoodEntry",
     "MoodLevel",
@@ -92,6 +98,7 @@ USER_MODELS = [
     AIConversationHistory,
     UserAIPreferences,
 ]
+CALENDAR_MODELS = [CalendarEvent]
 CONTENT_MODELS = [MoodEntry, DreamEntry, TherapyNote]
 SHARING_MODELS = [
     ShareKey,
@@ -122,6 +129,7 @@ ENCRYPTED_MODELS = [
 # All models for migration and initialization
 ALL_MODELS = (
     USER_MODELS
+    + CALENDAR_MODELS
     + CONTENT_MODELS
     + SHARING_MODELS
     + CHAT_MODELS
