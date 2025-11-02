@@ -1,0 +1,10 @@
+{
+  "name": "calendar",
+  "version": "1.0.0",
+  "description": "Kalenderverwaltung für Termine, Therapiesitzungen und Erinnerungen",
+  "enabled": true,
+  "routes_prefix": "/api/v1/calendar",
+  "tags": ["calendar", "events", "scheduling"],
+  "dependencies": [],
+  "author": "MindBridge Team"
+}

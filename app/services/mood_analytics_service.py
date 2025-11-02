@@ -454,3 +454,72 @@ class MoodAnalyticsService:
             return "Probiere verschiedene Aktivitäten für mehr Abwechslung"
         else:
             return "Gute Aktivitätsbalance!"
+
+    async def get_mood_trends(
+        self, user_id: str, start_date: datetime
+    ) -> Dict[str, Any]:
+        """Get mood trends over time period"""
+
+        entries = await self._get_recent_entries(
+            user_id,
+            days=(datetime.now() - start_date).days
+        )
+
+        if not entries:
+            return {
+                "trend": "no_data",
+                "average_mood": 5.0,
+                "data_points": [],
+                "message": "Nicht genug Daten verfügbar",
+            }
+
+        # Calculate trend
+        mood_scores = [e.mood_score for e in entries]
+        avg_mood = sum(mood_scores) / len(mood_scores)
+
+        # Calculate trend direction
+        mid_point = len(mood_scores) // 2
+        if mid_point > 0:
+            first_half = sum(mood_scores[:mid_point]) / mid_point
+            second_half = sum(mood_scores[mid_point:]) / (len(mood_scores) - mid_point)
+            change = second_half - first_half
+
+            if change > 0.5:
+                trend = "improving"
+            elif change < -0.5:
+                trend = "declining"
+            else:
+                trend = "stable"
+        else:
+            trend = "stable"
+
+        # Prepare data points
+        data_points = [
+            {
+                "date": e.entry_date.isoformat(),
+                "mood": e.mood_score,
+                "stress": e.stress_level,
+                "energy": e.energy_level,
+            }
+            for e in entries
+        ]
+
+        return {
+            "trend": trend,
+            "average_mood": round(avg_mood, 1),
+            "highest_mood": max(mood_scores),
+            "lowest_mood": min(mood_scores),
+            "data_points": data_points,
+            "total_entries": len(entries),
+        }
+
+    async def detect_patterns(self, user_id: str) -> Dict[str, Any]:
+        """Detect mood patterns and correlations"""
+
+        patterns_data = await self.find_mood_patterns(user_id, days=30)
+
+        return {
+            "patterns_detected": True,
+            "patterns": patterns_data,
+            "message": "Muster erfolgreich erkannt",
+        }

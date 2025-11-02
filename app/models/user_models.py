@@ -124,6 +124,11 @@ class User(Base):
     # User AI context (one-to-one relationship)
     ai_context = relationship("UserContext", back_populates="user", uselist=False)
 
+    # Calendar events
+    calendar_events = relationship(
+        "CalendarEvent", back_populates="user", cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
 
