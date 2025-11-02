@@ -43,10 +43,12 @@ export function RecentMoodWidget() {
   }
 
   const getTrend = (): { icon: React.ReactNode; text: string; color: string } | null => {
-    if (recentEntries.length < 2) return null
+    if (recentEntries.length < 2 || !recentEntries[0] || !recentEntries[1]) return null
 
-    const latest = recentEntries[0].mood_score
-    const previous = recentEntries[1].mood_score
+    const latest = recentEntries[0]?.mood_score
+    const previous = recentEntries[1]?.mood_score
+
+    if (latest === undefined || previous === undefined) return null
 
     if (latest > previous) {
       return {
