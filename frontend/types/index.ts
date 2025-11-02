@@ -380,3 +380,31 @@ export interface SharedDataStats {
   total_accesses: number;
   data_types_shared: string[];
 }
+
+// Calendar/Planner Types
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  start_time: string;
+  end_time: string;
+  event_type: 'therapy_session' | 'reminder' | 'personal' | 'medication' | 'appointment';
+  color?: string;
+  is_recurring: boolean;
+  recurrence_pattern?: string;
+  reminder_minutes?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCalendarEventRequest {
+  title: string;
+  description?: string;
+  start_time: string;
+  end_time: string;
+  event_type: 'therapy_session' | 'reminder' | 'personal' | 'medication' | 'appointment';
+  color?: string;
+  is_recurring?: boolean;
+  recurrence_pattern?: string;
+  reminder_minutes?: number;
+}

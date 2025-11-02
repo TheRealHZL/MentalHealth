@@ -1,0 +1,93 @@
+import type { CalendarEvent } from '@/types'
+import { addDays, addHours, setHours, setMinutes, startOfWeek } from 'date-fns'
+
+// Mock calendar events for development until backend is implemented
+export function generateMockCalendarEvents(): CalendarEvent[] {
+  const now = new Date()
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 }) // Monday
+
+  return [
+    {
+      id: 'event-1',
+      title: 'Therapiesitzung mit Dr. Schmidt',
+      description: 'Wöchentliche Sitzung zur Besprechung des Fortschritts',
+      start_time: setHours(setMinutes(addDays(weekStart, 1), 0), 14).toISOString(),
+      end_time: setHours(setMinutes(addDays(weekStart, 1), 0), 15).toISOString(),
+      event_type: 'therapy_session',
+      color: '#3B82F6',
+      is_recurring: true,
+      recurrence_pattern: 'weekly',
+      reminder_minutes: 30,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    {
+      id: 'event-2',
+      title: 'Medikamenteneinnahme',
+      description: 'Morgenmedikation',
+      start_time: setHours(setMinutes(addDays(weekStart, 0), 0), 8).toISOString(),
+      end_time: setHours(setMinutes(addDays(weekStart, 0), 30), 8).toISOString(),
+      event_type: 'medication',
+      color: '#10B981',
+      is_recurring: true,
+      recurrence_pattern: 'daily',
+      reminder_minutes: 15,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    {
+      id: 'event-3',
+      title: 'Yoga-Kurs',
+      description: 'Entspannungsübungen und Meditation',
+      start_time: setHours(setMinutes(addDays(weekStart, 2), 0), 18).toISOString(),
+      end_time: setHours(setMinutes(addDays(weekStart, 2), 30), 19).toISOString(),
+      event_type: 'personal',
+      color: '#8B5CF6',
+      is_recurring: true,
+      recurrence_pattern: 'weekly',
+      reminder_minutes: 60,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    {
+      id: 'event-4',
+      title: 'Arzttermin',
+      description: 'Kontrolluntersuchung',
+      start_time: setHours(setMinutes(addDays(weekStart, 4), 0), 10).toISOString(),
+      end_time: setHours(setMinutes(addDays(weekStart, 4), 30), 10).toISOString(),
+      event_type: 'appointment',
+      color: '#F59E0B',
+      is_recurring: false,
+      reminder_minutes: 120,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    {
+      id: 'event-5',
+      title: 'Stimmung erfassen',
+      description: 'Tägliche Erinnerung zur Stimmungserfassung',
+      start_time: setHours(setMinutes(addDays(weekStart, 0), 0), 20).toISOString(),
+      end_time: setHours(setMinutes(addDays(weekStart, 0), 15), 20).toISOString(),
+      event_type: 'reminder',
+      color: '#EF4444',
+      is_recurring: true,
+      recurrence_pattern: 'daily',
+      reminder_minutes: 0,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    {
+      id: 'event-6',
+      title: 'Spaziergang im Park',
+      description: 'Frische Luft und Bewegung',
+      start_time: setHours(setMinutes(addDays(weekStart, 5), 0), 16).toISOString(),
+      end_time: setHours(setMinutes(addDays(weekStart, 5), 0), 17).toISOString(),
+      event_type: 'personal',
+      color: '#8B5CF6',
+      is_recurring: false,
+      reminder_minutes: 30,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+  ]
+}

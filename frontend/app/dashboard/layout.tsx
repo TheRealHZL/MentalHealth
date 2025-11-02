@@ -13,6 +13,7 @@ import {
   BarChart3,
   FileText,
   Share2,
+  Calendar,
   Settings,
   LogOut,
   Menu,
@@ -86,6 +87,12 @@ export default function DashboardLayout({
       href: '/dashboard/therapy/notes',
       icon: FileText,
       current: pathname.startsWith('/dashboard/therapy'),
+    },
+    {
+      name: 'Kalender',
+      href: '/dashboard/calendar',
+      icon: Calendar,
+      current: pathname.startsWith('/dashboard/calendar'),
     },
     {
       name: 'Teilen',

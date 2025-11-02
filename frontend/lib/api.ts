@@ -33,8 +33,11 @@ import type {
   CreateShareKeyRequest,
   AccessLog,
   SharedDataStats,
+  CalendarEvent,
+  CreateCalendarEventRequest,
   PaginatedResponse
 } from '@/types';
+import { generateMockCalendarEvents } from './mockCalendarData';
 
 // Use relative URL - Next.js will proxy to backend via rewrites
 // In Docker: Next.js server (running in container) proxies to http://backend:8080
@@ -397,6 +400,98 @@ class ApiClient {
   async updateUserRole(userId: string, role: string): Promise<any> {
     const response = await this.client.put(`/admin/users/${userId}/role`, { role });
     return response.data;
+  }
+
+  // Calendar/Planner Endpoints (with mock data fallback until backend is implemented)
+  async getCalendarEvents(startDate?: string, endDate?: string): Promise<CalendarEvent[]> {
+    try {
+      const params: any = {};
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+
+      const response = await this.client.get<CalendarEvent[]>('/calendar/events', { params });
+      return response.data;
+    } catch (err) {
+      // Fallback to mock data until backend is implemented
+      console.warn('Calendar API not yet implemented, using mock data');
+      return generateMockCalendarEvents();
+    }
+  }
+
+  async getCalendarEvent(id: string): Promise<CalendarEvent> {
+    try {
+      const response = await this.client.get<CalendarEvent>(`/calendar/events/${id}`);
+      return response.data;
+    } catch (err) {
+      // Fallback to mock data
+      const mockEvents = generateMockCalendarEvents();
+      const event = mockEvents.find(e => e.id === id);
+      if (!event) throw new Error('Event not found');
+      return event;
+    }
+  }
+
+  async createCalendarEvent(data: CreateCalendarEventRequest): Promise<CalendarEvent> {
+    try {
+      const response = await this.client.post<CalendarEvent>('/calendar/events', data);
+      return response.data;
+    } catch (err) {
+      // Fallback: Create mock event
+      console.warn('Calendar API not yet implemented, creating mock event');
+      const newEvent: CalendarEvent = {
+        id: `event-${Date.now()}`,
+        ...data,
+        is_recurring: data.is_recurring || false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Store in localStorage for persistence
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('calendar_events');
+        const events = stored ? JSON.parse(stored) : [];
+        events.push(newEvent);
+        localStorage.setItem('calendar_events', JSON.stringify(events));
+      }
+
+      return newEvent;
+    }
+  }
+
+  async updateCalendarEvent(id: string, data: Partial<CreateCalendarEventRequest>): Promise<CalendarEvent> {
+    try {
+      const response = await this.client.put<CalendarEvent>(`/calendar/events/${id}`, data);
+      return response.data;
+    } catch (err) {
+      // Fallback: Update mock event
+      console.warn('Calendar API not yet implemented, updating mock event');
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('calendar_events');
+        const events = stored ? JSON.parse(stored) : generateMockCalendarEvents();
+        const index = events.findIndex((e: CalendarEvent) => e.id === id);
+        if (index >= 0) {
+          events[index] = { ...events[index], ...data, updated_at: new Date().toISOString() };
+          localStorage.setItem('calendar_events', JSON.stringify(events));
+          return events[index];
+        }
+      }
+      throw new Error('Event not found');
+    }
+  }
+
+  async deleteCalendarEvent(id: string): Promise<void> {
+    try {
+      await this.client.delete(`/calendar/events/${id}`);
+    } catch (err) {
+      // Fallback: Delete mock event
+      console.warn('Calendar API not yet implemented, deleting mock event');
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('calendar_events');
+        const events = stored ? JSON.parse(stored) : [];
+        const filtered = events.filter((e: CalendarEvent) => e.id !== id);
+        localStorage.setItem('calendar_events', JSON.stringify(filtered));
+      }
+    }
   }
 
   // Helper to check if user is authenticated
