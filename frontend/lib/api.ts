@@ -29,6 +29,10 @@ import type {
   TherapyTechnique,
   TherapySession,
   CreateTherapySessionRequest,
+  ShareKey,
+  CreateShareKeyRequest,
+  AccessLog,
+  SharedDataStats,
   PaginatedResponse
 } from '@/types';
 
@@ -304,6 +308,42 @@ class ApiClient {
 
   async getTherapyProgress(): Promise<any> {
     const response = await this.client.get('/therapy/progress');
+    return response.data;
+  }
+
+  // Data Sharing Endpoints
+  async createShareKey(data: CreateShareKeyRequest): Promise<ShareKey> {
+    const response = await this.client.post<ShareKey>('/sharing/keys', data);
+    return response.data;
+  }
+
+  async getShareKeys(page: number = 1, size: number = 10): Promise<PaginatedResponse<ShareKey>> {
+    const response = await this.client.get<PaginatedResponse<ShareKey>>('/sharing/keys', {
+      params: { page, size }
+    });
+    return response.data;
+  }
+
+  async getShareKey(id: string): Promise<ShareKey> {
+    const response = await this.client.get<ShareKey>(`/sharing/keys/${id}`);
+    return response.data;
+  }
+
+  async revokeShareKey(id: string): Promise<void> {
+    await this.client.delete(`/sharing/keys/${id}`);
+  }
+
+  async getAccessLogs(shareKeyId?: string, page: number = 1, size: number = 10): Promise<PaginatedResponse<AccessLog>> {
+    const params: any = { page, size };
+    if (shareKeyId) params.share_key_id = shareKeyId;
+    const response = await this.client.get<PaginatedResponse<AccessLog>>('/sharing/access-logs', {
+      params
+    });
+    return response.data;
+  }
+
+  async getSharedDataStats(): Promise<SharedDataStats> {
+    const response = await this.client.get<SharedDataStats>('/sharing/stats');
     return response.data;
   }
 

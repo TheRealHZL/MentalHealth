@@ -336,3 +336,47 @@ export interface CreateTherapySessionRequest {
   progress?: string;
   next_session?: string;
 }
+
+// Data Sharing Types
+export interface ShareKey {
+  id: string;
+  key: string;
+  recipient_email?: string;
+  recipient_name?: string;
+  data_types: string[];
+  expires_at?: string;
+  is_active: boolean;
+  created_at: string;
+  last_accessed_at?: string;
+  access_count: number;
+}
+
+export interface CreateShareKeyRequest {
+  recipient_email?: string;
+  data_types: string[];
+  expires_in_days?: number;
+}
+
+export interface SharedDataType {
+  type: 'mood' | 'dreams' | 'therapy_notes' | 'therapy_sessions' | 'analytics';
+  label: string;
+  description: string;
+  icon: string;
+}
+
+export interface AccessLog {
+  id: string;
+  share_key_id: string;
+  accessed_by: string;
+  data_type: string;
+  accessed_at: string;
+  ip_address?: string;
+  user_agent?: string;
+}
+
+export interface SharedDataStats {
+  total_share_keys: number;
+  active_share_keys: number;
+  total_accesses: number;
+  data_types_shared: string[];
+}

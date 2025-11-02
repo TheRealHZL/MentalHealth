@@ -12,6 +12,7 @@ import {
   Moon,
   BarChart3,
   FileText,
+  Share2,
   Settings,
   LogOut,
   Menu,
@@ -85,6 +86,12 @@ export default function DashboardLayout({
       href: '/dashboard/therapy/notes',
       icon: FileText,
       current: pathname.startsWith('/dashboard/therapy'),
+    },
+    {
+      name: 'Teilen',
+      href: '/dashboard/sharing',
+      icon: Share2,
+      current: pathname.startsWith('/dashboard/sharing'),
     },
   ];
 
